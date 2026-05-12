@@ -1,0 +1,1904 @@
+--- PAGE 1 ---
+Chapter 9 Build a Solution: Design the Run-time
+Interface
+The Run-time Interface is for intuitive control and monitoring of the solution in the running
+status. With the Run-time Interface, the end users, i.e., the operators at the manufacturing
+site, can view the inspection results in real time and determine whether to stop running the
+solution—even the corresponding assembly line at large—in particular cases. This section
+introduces the features of the Run-time Interface Design window and how to customize
+the interface to suit specific  requirements.
+9.1 Overview of the Run-time Interface Design Window
+The Run-time Interface Design window enables the design and customization of the Run-
+time Interface. This section provides an overview of the graphic user interface (GUI) of the
+window and the core function of each area.
+Click the 
+  in the toolbar on the main page to go to the Run-time Interface Design window.
+Figure 9-1 Window Overview
+The following table describes the functions of each area.Vision Master Platform User Manual
+196
+
+--- PAGE 2 ---
+Table 9-1 Run-time Interface Design Introduction
+Function
+AreaDescription
+Toolbar Provides functions such as running page saving, layer setting, deletion, and
+export. For details, see Toolbar Introduction  .
+Widget Area Contains widgets available to use on the running page. For details, see
+Widget Configuration  Reference  .
+Preview and
+Edit AreaDisplays the currently-designed running page. Allows you to create widgets
+and edit the added widgets. For details, see Basic Operations on Widgets  .
+Attribute
+Setting AreaAllows you to set attributes (such as layout, data source, color, and font) of
+the widget selected in the preview and edit area.
+Toolbar Introduction
+You can use the following functions in the toolbar.
+●
+  : open a saved Run-time Interface design from a local directory.
+●
+  : save the current design. For first-time  saving, you save a design file (.vmd).
+●
+  : open the design template window. You can apply a design template and delete
+saved templates.
+●
+  : save the current Run-time Interface as a template. You need to enter the Name ,
+Created By , Usage Scenarios , and Description , then click Confirm .
+●
+  : move the selected widgets' layer. They mean bring to front, bring
+forward, send to back, and send backward respectively.
+●
+  : align selected widgets. The alignment area is based on the minimal bounding box
+area that contains all selected widgets. You can align them to the left, center, right, top,
+vertically center, top, or bottom.
+Note
+Select at least 2 widgets.
+●
+  : justify the widgets vertically or horizontally. The justify area is based on the minimal
+bounding box area that contains all selected widgets.
+Note
+Select at least 3 widgets; otherwise, it will not justify the distribution.
+●
+  : undo one recent operation.
+●
+  : redo one recent operation.
+●
+ : remove the select widgets.
+●
+  : zoom the editing area to adapt to the window size.Vision Master Platform User Manual
+197
+
+--- PAGE 3 ---
+Note
+When you open the design window, this function is called for once by default.
+●
+  : click and drag the slider to zoom in or out the display ratio.
+●
+  : set whether to add a fixed  column at the top, bottom, left or right side of the Run-
+time Interface.
+●Preview : click to preview the Run-time Interface.
+●Export : click to compile and export the solution into a project package file. For details,
+see Run a Solution by Exporting the Operation Window  .
+Note
+●You can right-click a widget to delete, undo, redo, or move its layer.
+●You can copy and paste selected widgets through keyboard shortcuts Ctrl+C (for
+copying) and Ctrl+V (for pasting).
+9.2 Design the Run-time Interface
+You can design the Run-time Interface based on the business requirements to help the end
+users monitor and control the solution execution easily and more intuitively, thus
+improving their work efficiency.
+9.2.1 General Design Approach
+By default, the Run-time Interface is empty, and you need to customize it in the Run-time
+Interface Design  window as needed.
+The overall design approach is:
+1. Use a template or not: in the Run-time Interface Design  window, click 
+  to check if the
+template satisfies  your requirements. If yes, you can select it and modify the design as
+needed; if not, proceed to the next step.
+2. Set fixed  column layout: click 
+  to set the required fixed  column at the top/bottom/left/
+right side of the Run-time Interface.
+3. Set the layout: select the canvas and set the overall layout in the attribute setting area.
+4. Add and configure  widgets: click and drag required widgets into the fixed  columns or
+the canvas, and configure  the input source and other settings.
+Note
+When setting a widget, you can set its position, and alignment with controls in the
+toolbar.Vision Master Platform User Manual
+198
+
+--- PAGE 4 ---
+9.2.2 Basic Operations on Widgets
+The basic functional unit in an operation window is the widget. To design a well-
+functioning window, add multiple widgets and configure  their parameters.
+In the Widget Area, click and drag a required widget, move it into the Preview and Edit Area,
+and drop. Once added, you modify its position and size as needed and configure  the Data
+Source and other settings in the Attribute Setting Area.
+See the following video for the operation example.
+9.2.3 Design Example
+This section uses a real solution as an example to explain the whole process of designing
+a Run-time Interface.
+Before You Start
+Ensure you have built a solution before proceeding.
+Note
+This section uses the solution below as an example to explain the building process.
+Figure 9-2 Example Solution
+Steps
+1.Click 
+  to open the Run-time Interface Design  window.
+2.Click 
+  , and check TopFixed Bar  and BottomFixed Bar , then click Confirm .
+3.Design the TopFixed Bar.
+1)Select the top bar and set Split Template . It is Template1 by default. Here, the design
+employs the default template.
+2)Drag and drop the Textbox  widget into the left column to the topfixed  bar, and
+configure  related settings.
+The following only explains the changed parameters. Other parameters remain the
+default settings.Vision Master Platform User Manual
+199
+
+--- PAGE 5 ---
+●Text : enter "Castings C2C Dist.".
+●Auto Fill : enable it.
+●Font : set the font size to "48" and the font style to "bold".
+3)Drag and drop the Run Control  widget into the middle column of the bar, and configure
+related settings.
+Note
+Use the default settings for this widget.
+4)Drag and drop the OK&NG  widget into the middle column of the bar, place it on the
+right side of the Run Control  widget, and configure  its settings.
+Note
+Set Data Source  to subscribe Flow1  → C2C Measurement2  → ModuStatus  . Use the
+default settings for other parameters.
+5)Drag and drop the Button  widget into the middle column of the bar, place it on the right
+side of the OK&NG , and configure  its setting.
+Set the following parameters and use the default value for others.
+●Data Source : click Config  to set it, set the Type  to Solution, set Method  to Save, then
+click Confirm .
+●Show Text : set to "Save Sol."
+Refer to the following video for the sub-steps above.
+4.Design the Bottomfixed  Bar. Select the bottom bar, and in the Select List  displayed on
+the right side, select the devices you want to view, for example, the global camera, TCP
+client, VB2230, etc.
+5.Set the layout of the canvas.
+1)Select the canvas and select "Template5" in the Split Template .
+2)Modify the grid with the triangle controls on the border.
+3)Select the area on the upper left and select "2Screen" in the Basic Layout .
+4)Select the area on the bottom left and select "2Screen" in the Basic Layout .
+5)Set the screens from the previous steps into 2 "2Screens".
+6)Select the middle 2 screens and set them to "1Screen" to merge them.
+7)Modify the area size with the triangle controls on the border to make the 3 areas on
+the bottom left the same size.
+Refer to the following video for the substeps above.
+6.Select the left of the canvas for image display. Drag and drop the Image  widget into the
+5 screens created from the previous step, and configure  related settings.
+The following only explains the changed parameters. Other parameters remain the
+default settings.
+●Data Source : set them to Flow1  → Image Source1  → OutputImage  .
+●Graphical Configuration : for the screen on the top left, check all graphics in C2C
+Measurement1, C2C Measurement2, and C2C Measurement3. For the screen on the
+top middle, check all graphics in Blob Analysis1. For the screen on the bottom left,Vision Master Platform User Manual
+200
+
+--- PAGE 6 ---
+check all graphics in C2C Measurement1, C2C Measurement2, and C2C
+Measurement3 respectively.
+●Show ToolsBar : set to disable for all.
+Refer to the following video for the substeps above.
+7.Set the right side of the canvas for viewing live status and data. Drag and drop the Table
+widget onto the right side and configure  related settings.
+The following only explains the changed parameters. Other parameters remain the
+default settings.
+●Rows : set it to 22.
+●Columns : set it to 5.
+●Line Title : set it "Result_Display".
+●Data Source : click Config  to set the data source for each row.
+○Column : set to CenterX, CenterY, Runtime, Angle, and Dist respectively.
+○Data Type : set to float.
+○Data Source : set to parameters in C2C Measurement1,CircleAnnulus1CenterX,
+CircleAnnulus1CenterY, Time(ms), Angle, and Distance.
+Refer to the following video for the substeps above.
+What to do next
+Open the Run-time Interface, run the solution for once or continuously, and the running
+status is as follows.
+Figure 9-3 Operation Window
+9.3 Guide to Runtime Interface Widgets
+An Runtime Interface consists of canvas(es), fixed  bar(s), and widget(s). The widgets are
+for interacting with the client, while the fixed  bars and canvas are for organizing widgets
+and (or) displaying device status.Vision Master Platform User Manual
+201
+
+--- PAGE 7 ---
+9.3.1 Canvas and Fixed Bars
+When designing the Runtime Interface, you can configure  the canvas and fixed  bars with
+the Preview and Edit area and Attribute Setting area.
+Canvas
+You can add multiple canvases at the tab bar above the canvas.
+●Add a canvas: in the canvas tab bar, click 
+  to create a new canvas.
+●Change a canvas' title: click a tab and enter the desired title into Content  in the Base
+Settings on the right.
+●Delete a canvas: right-click a tab and select Delete .
+The canvas is in 1screen layout by default. Click the canvas and set the layout or apply a
+split template.
+●Layout split style: configure  settings in basic layout and split template.
+Note
+○When you set the layout, you can click and drag the triangle to adjust the size of each
+area.
+○After you set the layout split, you can select one or multiple areas and split them
+again.
+Basic layout
+Select the basic layout of the canvas. You can click Custom  to set the rows and
+columns and keep the number of each between 1 and 10.
+Split Template
+Apply a split template to the canvas.
+●Base Settings
+Show Grid
+When there are multiple screens on the canvas, you can enable this feature to display
+the grid line.
+Grid Line Color
+Background
+Set the color of the grid line and the whole background.
+TopFixed/LeftFixed/RightFixed Bar
+The fixed  bar on top, left, and right is similar to the canvas. You can drag and drop different
+widgets into these areas.
+Their configurations  are similar to that of the canvas. For details, see Canvas  .Vision Master Platform User Manual
+202
+
+--- PAGE 8 ---
+Note
+In the Base Settings , you can set the width of the leftfixed  and rightfixed  bars.
+BottomFixed Bar
+You can view the connection status of cameras, communication devices, controllers, and
+other devices. At most, you can view 20 devices at the same time.
+Select List : select devices whose connection status you want to view. The available
+devices in the select list are those you added in Manage Cameras in Camera Set  and
+Communication Management  .
+9.3.2 Widget Configuration  Reference
+The Runtime Interface consists of multiple widgets, which are different in functions and
+attribute settings.
+The following table displays the widgets in the Runtime Interface in detail:
+Foundation Widgets
+：
+●Image
+●Multiple Images
+●Run Control
+●Run Status
+●OK/NG
+●Textbox
+●Button
+●Switch Control
+●Params Settings
+●Variable Settings
+●Character Settings
+●Traffic  Light
+●Conditional LightLayout Widgets  ：
+●Group Box
+●Child Interface
+●Tab ControlChart Widgets  ：
+●Table
+●Line Diagram Array
+●Multi Line Diagram
+●Production
+Statistics
+●PieControl
+●Param Settings
+Array
+●Label ArrayOther Widgets  ：
+●Image
+●World Clock
+●Log
+Foundation Widgets
+Image
+You can subscribe and display the image output by a module in a flow  through the image
+widget.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.Vision Master Platform User Manual
+203
+
+--- PAGE 9 ---
+●Data Source:
+Data Source
+Allows you to subscribe to the image source. You can click 
+  and select an image
+output by a module.
+Graphical Configuration
+Allows you to select images for overlap display based on the data source. You can
+select images of multiple modules from the loaded flow.
+Note
+You need to set the Data Source  first before setting this parameter. Otherwise, this
+parameter will be empty.
+Overlay 1/2/3
+Allows you to overlay other images for display based on images subscribed in the
+data source.
+Note
+○You need to first set the Data Source  before setting this parameter.
+○You can select images output by a module only from the flow  subscribed in Data
+Source .
+Keep Last Result
+Allows you to determine whether to display the last rendering result if no image is
+output in the subscribed result when the current flow  ends.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.Vision Master Platform User Manual
+204
+
+--- PAGE 10 ---
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Show StatusBar
+Allows you to determine whether to display the status information (including image
+resolution, the current location of the cursor, and RGB or the gray value) in the lower
+right corner.
+Show ToolsBar
+Allows you to determine whether to enable the tool bar (including functions of
+zooming in, zooming out, 1:1 ratio, full-screen, and locking) in the upper left corner.
+Note
+The 1:1 ratio can quickly restore to center the image display which is adaptive to the
+window size after the image is zoomed in, zoomed out, or moved.
+Display Auxiliary Line
+Allows you to determine whether to display the auxiliary cross line.
+When there is no solution or procedure running, you can adjust the position of the
+auxiliary cross line by moving its center point.
+List of historical images
+When enabled, a list of historical images can be added below the image widget after
+you trigger the flow,  The list displays the rendering results of the most recent flow
+executions.
+Note
+○The overlay layers are not displayed in the list of historical images.
+○When the image output rate is excessively high, a few images obtained from certain
+executions might be omitted.Vision Master Platform User Manual
+205
+
+--- PAGE 11 ---
+Number of historical images
+Allows you to set the maximum number of historical images to be displayed in the
+list.
+Multiple Images
+The multi-image widget has the same function as the image widget. The only difference is
+that this widget allows you to subscribe and display multiple images.
+The specific  parameters of this widget are divided into data source and layout.
+●Data Source:
+Image Quantity
+Allows you to set the image quantity in the multi-image window and the location
+relationship among images.
+Data Source
+You can click Config  to set the PictureName , Image Source , Graphics Source , Overlay
+1/2/3 , Display Auxiliary Line  and Keep Last Result . The parameter settings are the
+same as that of the image widget.
+Note
+You are recommended to first set the Image Quantity .
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that takeVision Master Platform User Manual
+206
+
+--- PAGE 12 ---
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+Run Control
+The running control widget can control the running method of all flows  or a single flow.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Sources:
+Data Source
+Allows you to subscribe to flows  or AllProcess (namely the whole solution) in the
+loaded solutions.
+Control Type
+You can set the control type to Once , Continuously , or Both Display .
+Once
+Only the button for a single execution is displayed.
+Continuously
+Only the button for continuous execution is displayed.
+Both Display
+The above two buttons are displayed at the same time.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.Vision Master Platform User Manual
+207
+
+--- PAGE 13 ---
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Button Color
+Border Color
+Icon Color
+Allows you to set the color of the button, border, and icon.
+Run Status
+The running status widget can display the running status of all flows  or a single flow.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+Allows you to subscribe to flows  or AllProcess (namely the whole solution) in the
+loaded solutions.
+Note
+○If you subscribe to all flows,  when any flow  in the solution is executed, the icon is
+displayed as "Running" (busy status). Otherwise, the icon is displayed as "Stop Run"
+(free status).
+○If you subscribe to a single flow,  when the selected flow  is executed, the icon is
+displayed as "Running" (busy status). Otherwise, the icon is displayed as "Stop Run"
+(free status).
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+SizeVision Master Platform User Manual
+208
+
+--- PAGE 14 ---
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Free-Background Color
+Free-Foreground Color
+Busy-Background Color
+Busy-Foreground Color
+Allows you to set the color of each part for the icon during free status and busy
+status.
+Fillet Radius
+Allows you to set the fillet  radius of four corners of the icon to control the icon shape.
+OK/NG
+The OK/NG widget can display OK (represented by 1) or NG (represented by 0) based on
+the subscribed data.
+The specific  parameters of this widget are divided into data source, layout, appearance,
+OK, and NG.
+●Data Source:Vision Master Platform User Manual
+209
+
+--- PAGE 15 ---
+Data Source
+Allows you to subscribe to the int-type result of each module in a solution. You are
+advised to subscribe to the module status of each module and the result of the
+Condition Detection  module.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Fillet Radius
+Allows you to set the fillet  radius of four corners of the icon to control the icon shape.
+●OK/NG:
+OK-Content
+NG-Content
+Allows you to set the display content when the icon is in OK or NG status.Vision Master Platform User Manual
+210
+
+--- PAGE 16 ---
+OK-Font
+NG-Font
+Allows you to set the font size and style when the icon is in OK or NG status.
+OK-Border Thickness
+NG-Font Thickness
+Allows you to set the border thickness of the widget when the icon is in OK or NG
+status.
+OK-Background
+NG-Background Color
+OK-Font Color
+NG-Font Color
+OK-Border Color
+NG-Border Color
+Allows you to set the color for the background, font, and border of the widget when
+the icon is in OK or NG status.
+Textbox
+The textbox widget can display the defined  text information on the running window. You
+can customize the text content or subscribe to different types of data in a solution for
+display.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Type
+Allows you to set the display data on the textbox to string , int, or float  type.
+Data Source
+Allows you to subscribe to the module result, global variable, local variable, or solution
+path of each module in a solution.
+Note
+The data that can be subscribed to may vary according to the selected data type. You
+can subscribe to the solution path only when setting the Data Type  to string .
+Format String
+This parameter is automatically loaded after you set the Data Source  and is displayed
+as "Description for subscribed data: <subscribed data>" by default. You can
+customize the "Description for subscribed data:".
+"<subscribed data>" is a formatted syntax, which varies in different data types.
+○When you set Data Type  to string , the formatted syntax is "%s".
+○When you set Data Type  to int, the formatted syntax is "%0d".Vision Master Platform User Manual
+211
+
+--- PAGE 17 ---
+›If the formatted syntax remains at its default content, the widget will output the
+int-type data of the data source.
+›If you have special needs, you can modify the Arabic numeral after "%" to set the
+maximum number of digits for the output int-type data. For example, if the
+original data is 600, and the formatted syntax is set to "%5d", then the widget will
+output 00600 when the solution is executed.
+○When you set Data Type  to float , the formatted syntax is "%1.3f". In this case, three
+effective numbers are remained behind the decimal point. You can customize the
+arabic numeral after "%". For example, "%1.6f" represents that six effective numbers
+are remained behind the decimal point.
+Note
+Ensure that you know the requirements related to formatted syntaxes when setting
+this parameter. If not, contact our technical support for more information.
+Text
+Displays information after you subscribe to a data source, and allows you to
+customize the display information if you do not subscribe to a data source.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of theVision Master Platform User Manual
+212
+
+--- PAGE 18 ---
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Allows you to set the font color for the widget.
+Button
+You can use the button widget to set or redo some functions of the Software on the
+running window.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add trigger
+commands.
+You can set the Type , Method , and Input Params  for each trigger command.
+Note
+You can configure  multiple trigger commands for one button. When in use, the
+commands are executed for each click based on the set command sequence.
+The trigger command types include interface link, parameter configuration,  solution,
+execution, and reset.
+Interface Link
+Allows you to click the button to open a specific  window. The supported windows
+include the Global Camera  window, the Global Communication  window, the Global
+Variable  window, the Log window, and the Comprehensive Configuration  window.
+Param Config
+Allows you to click the button to open the parameter configuration  window of a
+flow  or a module.
+Solution
+Allows you to click the button to save the current solution, or save it as a new
+solution.Vision Master Platform User Manual
+213
+
+--- PAGE 19 ---
+Execute
+Allows you to click the button to run flows  once, start/stop continuous run, and
+execute module actions.
+Run Once
+Run all flows  (All Process ), a single flow,  or a single module once.
+Start Continuous Run
+Stop Continuous Run
+Start or stop the continuous run of all flows  (All Process ) or a single flow.
+Module Action
+Execute specific  actions on a selected module. For example, you can reset
+variables in the Variable Calculation  module or clear calibration points in the N-
+point Calibration  module.
+Reset
+Allows you to click the button to reset a selected object. The objects that can be
+reset include Variable Calculation  and Data Queue .
+Variable Calculation
+You are allowed to reset the variables of the variable calculation module in all
+flows  (namely AllCalculators ) or in a single flow.
+Data Queue
+You can reset all data queue modules (namely AllDataQueueModules ).
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.Vision Master Platform User Manual
+214
+
+--- PAGE 20 ---
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Show Text
+Allows you to set the text to be displayed on the button,
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Background
+Border Color
+Click Color
+Allows you to set the color of the font, background, border, and button.
+ImageData
+You can click 
+  to select a image from your local path to overlay on this button.
+Stretch Mode
+Allows you to set the display mode of the imported ImageData  on this widget.
+Available options include None, Fill, Uniform, and UniformToFill.
+Fillet Radius
+Allows you to set the fillet  radius of four corners of the icon to control the icon shape.
+Switch Control
+You can subscribe to the bool parameter through the switch control widget and determine
+whether to enable this parameter when running a solution on the running window.
+The specific  parameters are divided into data source and layout.
+●Data Source:
+Data Source
+Allows you to subscribe to bool-type parameters in each module.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.Vision Master Platform User Manual
+215
+
+--- PAGE 21 ---
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+Params Settings
+You can subscribe to the int-type or float-type  parameters of each module. After
+subscription, you can set the parameters when running a solution on the running window.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Parameter Type
+Allows you to set the type of the subscribed data to int or float .
+Data Source
+Allows you to subscribe to the int or float  parameter in the solution.
+Param
+Allows you to customize the parameter name.
+The Number Of Decimal PlacesVision Master Platform User Manual
+216
+
+--- PAGE 22 ---
+When the Parameter Type  is set to float , you can adjust this value to determine the
+number of decimal places to be displayed.
+●Layout:
+Width
+Allows you to set the width of this parameter widget. You can also adjust the widget
+width in the preview and edit area in real-time.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Background
+Font Color
+Allows you to set the color of the background and font for this widget.
+Font
+Allows you to set the font size and style for the widget.
+Variable Settings
+You can subscribe to the variables added in Variable Calculation  modules. The variable will
+be marked as red when you subscribe to the expression. The variable can be displayed and
+modified  on the running window in real time.Vision Master Platform User Manual
+217
+
+--- PAGE 23 ---
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+Allows you to subscribe to variables added in the Variable Calculation  module.
+●Layout:
+Width
+Allows you to set the width of this parameter widget. You can also adjust the widget
+width in the preview and edit area in real-time.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Background
+Font Color
+Allows you to set the color of the background and font for this widget.
+Font
+Allows you to set the font size and style for the widget.
+Character Settings
+The character settings widget can display subscribed string information.Vision Master Platform User Manual
+218
+
+--- PAGE 24 ---
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+Allows you to subscribe string-type variables of global/local variables and string-type
+parameters of each module.
+●Layout:
+Width
+Allows you to set the width of this parameter widget. You can also adjust the widget
+width in the preview and edit area in real-time.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Background
+Font Color
+Allows you to set the color of the background and font for this widget.
+Font
+Allows you to set the font size and style for the widget.Vision Master Platform User Manual
+219
+
+--- PAGE 25 ---
+Traffic  Light
+The traffic  light widget can display the module status in real time.
+You can determine the display color (red, represented by 0, or green, represented by 1) of
+the widget based on the subscribed module status.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+Allows you to subscribe to the status of each module.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Traffic  Light ContentVision Master Platform User Manual
+220
+
+--- PAGE 26 ---
+Allows you to customize the display content for the traffic  light widget.
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Allows you to set the font color for the widget.
+Conditional Light
+You can determine the display color of the widget based on the subscribed data and the
+set conditions.
+Note
+If the subscribed parameter meets multiple conditions, the first color meeting the
+conditions is displayed based on the order of > value, < value, and default value.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Parameter Type
+Allows you to set the type of the subscribed data to int or float .
+Data Source
+Allows you to subscribe to the int or float  parameter in modules or global variables.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.Vision Master Platform User Manual
+221
+
+--- PAGE 27 ---
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Traffic  Light Content
+Allows you to customize the display content for the conditional light widget.
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Allows you to set the font color for the widget.
+Fillet Radius
+Allows you to set the fillet  radius of four corners of the icon to control the icon shape.
+DefaultValueBackColor
+DefaultValueBorderColor
+>ValueBackColor
+>ValueBorderColor
+<ValueBackColor
+<ValueBorderColor
+Allows you to set the border/background color of the conditional light when the
+subscribed value is the default value, ">" value, or "<" value.
+>ValueThreshold
+<ValueThreshold
+Allows you to set the threshold values for ">" and "<" conditions.
+Note
+You do not need to set the default value, which corresponds to the value that does not
+meet the ">" condition and "<" condition at the same time.
+Layout WidgetsVision Master Platform User Manual
+222
+
+--- PAGE 28 ---
+Group Box
+You can group multiple widgets which were added to the Runtime Interface together
+through the group box widget.
+You can move a widget into the group box by selecting and dragging the widget to the area
+where the group box is located.
+Note
+The method for removing widgets is the same as that for moving widgets into the group
+box.
+The specific  parameters of this widget are divided into layout and appearance.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:Vision Master Platform User Manual
+223
+
+--- PAGE 29 ---
+Title
+Allows you to customize the title displayed in the upper left corner of the group box
+widget.
+Font
+Allows you to set the font size and style for the widget.
+Header Background
+Font Color
+Background
+Border Color
+Allows you to set the color for the header background, font, background, and border of
+this widget.
+Child Interface
+This widget allows you to add a new Runtime Interface as the sub-window to the current
+Runtime Interface. After configuration,  a new Runtime Interface will pop up when you click
+this widget. The usage method for widgets in the subwindow is the same as that on the
+Runtime Interface.
+Note
+At most three levels of sub-windows can be embedded in the Runtime Interface.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Edit Subinterface
+You can click Config  to switch to the subinterface design window in the preview and
+edit area. In the right configuration  pane of that window, you can adjust the layout,
+split template and basic settings of the widget. When you complete the configuration,
+you can close the subinterface design window and go back to settings of the Runtime
+Interface.
+Password
+You can click Config  to determine whether to set a password for the child window. No
+password is set be default.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+MarginVision Master Platform User Manual
+224
+
+--- PAGE 30 ---
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Text
+Allows you to customize the name of the child window.
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Background
+Border Color
+Allows you to set the color for the font, background, and border of this widget.
+Fillet Radius
+Allows you to set the fillet  radius of four corners of the icon to control the icon shape.
+Display Icon
+Allows you to determine whether to display 
+  in front of the Text  information in the
+child interface widget.
+Tab Control
+The tab control is the combination of multiple group box widgets. One group box
+corresponds to one tab.Vision Master Platform User Manual
+225
+
+--- PAGE 31 ---
+Note
+The method for moving widgets into or removing widgets from the Tab Control  is the same
+as that of the Group Box  .
+You can configure  parameters for both the entire tab control widget and multiple contained
+tab pages.
+●When you select the entire tab control widget, the specific  parameters are divided into
+data source, layout, and appearance.
+○Data Source:
+Tab Page Quantity
+Allows you to set the number of the contained tab pages.
+○Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-
+time in the preview and edit area. The margin consists of the values of four
+parameters T, B, L, and R, which correspond to the pixel numbers of the distance
+from the widget to the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values
+to the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which
+depends on the selected vertical alignment method and horizontal alignment
+method in the Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner
+is selected as the origin for the Margin  parameter. In this case, the parameters that
+take effect are T and L, which correspond to the distance from the top and the left
+side of this widget to the top and the left side of the Runtime Interface. The values
+of the invalid parameters B and R are displayed as 0, and the manual modification
+does not work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in
+the vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+○Appearance:Vision Master Platform User Manual
+226
+
+--- PAGE 32 ---
+Background
+Border Color
+Font Color
+Allows you to set the color for the background, border, and font of this widget.
+Select Background
+Allows you to set the color for the title bar of a tab page when the tab is selected.
+Align
+Allows you to set the alignment method for the title bar of tab pages. Available
+options include left alignment, top alignment, right alignment, and buttom
+alignment.
+Display Icon
+Allows you to determine whether to display the title bar of tab pages.
+●When you select a single tab, the specific  parameters are divided into layout and
+appearance.
+○Appearance:
+Tab Page Name
+Allows you to customize the name of the selected tab page.
+○Layout:
+Size
+Allows you to view the tab size.
+Note
+You can modify the tab size in the preview and edit area.
+Margin
+Allows you to adjust the tab position. You can click 
+  to the right of either the T, B, L,
+or R parameter to update all values to the value of the selected parameter.
+Chart Widgets
+Table
+This widget can present the subscribed data by scrolling through the columns, and
+historical results are presented in reversed order based on execution times. The table
+widget is usually used when you need to view the running results of multiple flows  at the
+same time.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data SourceVision Master Platform User Manual
+227
+
+--- PAGE 33 ---
+You can click Config  to set the column name, column width, data type, data source,
+and color for each column.
+Note
+You are recommended to set the number of Columns  first.
+Data Type
+The data type can be set to string, int, or float.
+Data Source
+Allows you to subscribe to data meeting the requirement of the set Data Type  in
+modules or global variables.
+Color Edit
+Allows you to set Brush  for subscribed data in a table when the data meets the
+requirements of the set Condition  and Comparison Value .
+Note
+If a piece of data meets multiple conditions, the color that corresponds to the first
+met condition takes effect.
+Condition
+The condition can be set to = = (namely "equal to"), ! = (namely "not equal to"), >,
+<, > =, and < =.
+Note
+String-type data only support = = and !=.
+Rows
+Columns
+Allows you to set the rows and columns of the table.
+Line Title
+Allows you to set the display content of the first cell in the upper left corner of the
+table.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+MarginVision Master Platform User Manual
+228
+
+--- PAGE 34 ---
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Font
+Allows you to set the font size and style for the widget.
+Title Bar Content
+Title Bar
+Font Color
+Background
+Column header background
+Row background
+Alternating row background
+Border Color
+Allow you to set colors for different elements of the widgets, including the title and
+other fonts, backgrounds of title bar, column header and rows, as well as the border.Vision Master Platform User Manual
+229
+
+--- PAGE 35 ---
+Line Diagram Array
+This widget displays subscribed data with a linear relationship between the total execution
+times and the data corresponding to the current execution. Each data source is presented
+with a separate line graph.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add data.
+A piece of data consists of the following parameters.
+Data Type
+The data type can be set to int or float.
+Data Source
+Allows you to subscribe to the int or float  parameter in the solution.
+Name
+Allows you to customize the data name.
+Array Index
+If you subscribe to an array as the Data Source , you can set this parameter to
+determine which element in the array to be displayed. The value is 0 by default,
+which means that the first element in the array is displayed. When the Data Source
+is not an array, this parameter should be set to 0.
+Default Color
+Allows you to set the color for each piece of data displayed in the widget.
+UL Limits
+You can click 
+  to open the configuration  window and then enable Display Upper
+And Lower Limits  to set the parameters below.
+Upper Limits
+Lower Limits
+Allows you to set the values and colors for the upper limit and lower limit.
+The upper and lower limits will be displayed with the set color in the widget, which
+allows you to quickly judge whether the data is within the upper and lower limits.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.Vision Master Platform User Manual
+230
+
+--- PAGE 36 ---
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Title Bar Content
+Title Bar
+Graph Background
+Coordinate Axis Color
+Allows you to set the color for each part of this widget.
+Data of The Latest RunTimes
+Allows you to control this widget to obtain the results of how many recent executions.
+Multi Line Diagram
+This widget displays subscribed data with a linear relationship between the total execution
+times and the data corresponding to the current execution. The difference from the Line
+Diagram Array  is that the multi-line diagram widget allows to present multiple data sources
+in a single line graph.Vision Master Platform User Manual
+231
+
+--- PAGE 37 ---
+For the parameter settings of this widget, refer to Line Diagram Array  .
+Production Statistics
+This widget allows you to view the real-time value, maximum value, minimum value,
+average value, range and standard difference of the subscribed data.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add data.
+A piece of data consists of the following parameters.
+Data Type
+The data type can be set to int or float.
+Data Source
+Allows you to subscribe to the int or float  parameter in the solution.
+Name
+Allows you to customize the data name.
+Array Index
+If you subscribe to an array as the Data Source , you can set this parameter to
+determine which element in the array to be displayed. The value is 0 by default,
+which means that the first element in the array is displayed. When the Data Source
+is not an array, this parameter should be set to 0.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.Vision Master Platform User Manual
+232
+
+--- PAGE 38 ---
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Show Columns Header
+Allows you to select the displayed data. You can check the current value, maximum,
+minimum, average, range, and standard deviation.
+Title Bar Content
+Title Bar
+Column header color
+Column header background
+Row background
+Alternating row background
+Font Color
+Allows you to set the color for each part of this widget.
+PieControl
+This widget can sum the values of multiple data sources as a whole, and display the
+proportion of each value in the whole on the running window when you run the flow.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add data.Vision Master Platform User Manual
+233
+
+--- PAGE 39 ---
+A piece of data consists of the following parameters.
+Data Type
+The data type can be set to int or float.
+Data Source
+Allows you to subscribe to the int or float  parameter in the solution.
+Name
+Allows you to customize the data name.
+Array Index
+If you subscribe to an array as the Data Source , you can set this parameter to
+determine which element in the array to be displayed. The value is 0 by default,
+which means that the first element in the array is displayed. When the Data Source
+is not an array, this parameter should be set to 0.
+Default Color
+Allows you to set the color for each piece of data displayed in the widget.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+AlignVision Master Platform User Manual
+234
+
+--- PAGE 40 ---
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Title Bar Content
+Title Bar
+Background
+Allows you to set the color for each part of this widget.
+Param Settings Array
+This widget is a combination of multiple Params Settings  widgets.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add data.
+A piece of data consists of the following parameters.
+Param
+Allows you to customize the parameter name.
+Data Type
+Allows you to set the type of the subscribed data to int or float .
+Data Source
+Allows you to subscribe to the int or float  parameter in the solution.
+Decimal Digits
+When the Data Type  is set to float , you can adjust this value to determine the
+number of decimal places to be displayed.
+Orientation
+The added parameters can be arranged horizontally or vertically.
+Spacing
+Allows you to set the spacing between multiple widgets in the Param Settings Array
+widget.
+●Layout:
+Auto FillVision Master Platform User Manual
+235
+
+--- PAGE 41 ---
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Font
+Allows you to set the font size and style for the widget.
+Title Bar Content
+Title Bar
+Font Color
+Allows you to set the color for each part of this widget.Vision Master Platform User Manual
+236
+
+--- PAGE 42 ---
+Label Array
+This widget is a combination of multiple Textbox  widgets.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+Data Source
+You can click Config  to open the configuration  window, and then click 
+  to add data.
+A piece of data consists of the following parameters.
+Text
+Displays information after you subscribe to a data source, and allows you to
+customize the display information if you do not subscribe to a data source.
+Format String
+This parameter is automatically loaded after you set the Data Source  and is
+displayed as "Description for subscribed data: <subscribed data>" by default. You
+can customize the "Description for subscribed data:".
+"<subscribed data>" is a formatted syntax, which varies in different data types.
+○When you set Data Type  to string , the formatted syntax is "%s".
+○When you set Data Type  to int, the formatted syntax is "%0d".
+›If the formatted syntax remains at its default content, the widget will output
+the int-type data of the data source.
+›If you have special needs, you can modify the Arabic numeral after "%" to set
+the maximum number of digits for the output int-type data. For example, if the
+original data is 600, and the formatted syntax is set to "%5d", then the widget
+will output 00600 when the solution is executed.
+○When you set Data Type  to float , the formatted syntax is "%1.3f". In this case,
+three effective numbers are remained behind the decimal point. You can
+customize the arabic numeral after "%". For example, "%1.6f" represents that six
+effective numbers are remained behind the decimal point.
+Note
+Ensure that you know the requirements related to formatted syntaxes when setting
+this parameter. If not, contact our technical support for more information.
+Data Type
+Allows you to set the display data on the textbox to string , int, or float  type.
+Data Source
+Allows you to subscribe to the module result, global variable, local variable, or
+solution path of each module in a solution.Vision Master Platform User Manual
+237
+
+--- PAGE 43 ---
+Note
+The data that can be subscribed to may vary according to the selected data type.
+You can subscribe to the solution path only when setting the Data Type  to string .
+Color Edit
+Allows you to set Brush  for subscribed data in a table when the data meets the
+requirements of the set Condition  and Comparison Value .
+Note
+If a piece of data meets multiple conditions, the color that corresponds to the first
+met condition takes effect.
+Condition
+The condition can be set to = = (namely "equal to"), ! = (namely "not equal to"), >,
+<, > =, and < =.
+Note
+String-type data only support = = and !=.
+Orientation
+The added parameters can be arranged horizontally or vertically.
+Spacing
+Allows you to set the spacing between multiple widgets in the Label Array  widget.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.Vision Master Platform User Manual
+238
+
+--- PAGE 44 ---
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Font
+Allows you to set the font size and style for the widget.
+Title Bar Content
+Title Bar
+Font Color
+Allows you to set the color for each part of this widget.
+Other Widgets
+Image
+This widget allows you to import local pictures and display them on the running window.
+The specific  parameters of this widget are divided into data source, layout, and
+appearance.
+●Data Source:
+ImageData
+You can import pictures from the local path.
+Stretch ModeVision Master Platform User Manual
+239
+
+--- PAGE 45 ---
+Allows you to set the display mode of the imported ImageData  on this widget.
+Available options include None, Fill, Uniform, and UniformToFill.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Background
+Border Color
+Allows you to set the color for the picture background and border.
+Border Thickness
+Allows you to set the border thickness for the picture.
+Note
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.Vision Master Platform User Manual
+240
+
+--- PAGE 46 ---
+World Clock
+This widget can display the current time of the selected time zone.
+The specific  parameters of this widget are divided into time setting, layout, and
+appearance.
+●Time Setting:
+Format
+Allows you to set the format type for displaying the time.
+Time Zone
+Allows you to set the time zone.
+●Layout:
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Font
+Allows you to set the font size and style for the widget.
+Font Color
+Allows you to set the font color for the widget.Vision Master Platform User Manual
+241
+
+--- PAGE 47 ---
+Log
+This widget can display tho log information of the Software on the running window in real
+time (namely the Log of the System ).
+The specific  parameters of this widget are divided into layout and appearance.
+●Layout:
+Auto Fill
+Allows this widget to fill the entire Runtime Interface automatically.
+Size
+Allows you to adjust the widget size. You can also adjust the widget size in the
+preview and edit area.
+Margin
+Allows you to adjust the widget location. You can also adjust the location in real-time
+in the preview and edit area. The margin consists of the values of four parameters T,
+B, L, and R, which correspond to the pixel numbers of the distance from the widget to
+the top, bottom, left side, and right side of the Runtime Interface.
+You can click 
+  to the right of either the T, B, L, or R parameter to update all values to
+the value of the selected parameter.
+Note
+For this parameter, only one of T and B and one of R and L take effect, which depends
+on the selected vertical alignment method and horizontal alignment method in the
+Align  parameter.
+For instance, if you select Top Align  and Left Align , the point in the upper left corner is
+selected as the origin for the Margin  parameter. In this case, the parameters that take
+effect are T and L, which correspond to the distance from the top and the left side of
+this widget to the top and the left side of the Runtime Interface. The values of the
+invalid parameters B and R are displayed as 0, and the manual modification  does not
+work.
+Align
+ corresponds to top alignment, center alignment, and bottom alignment in the
+vertical direction, respectively. And 
+  correspond to left alignment, center
+alignment, and right alignment in the horizontal direction, respectively.
+●Appearance:
+Title
+Allows you to set the title name.
+Display TitleBar
+Allows you to determine whether to display the title bar.
+Title Bar ContentVision Master Platform User Manual
+242
+
+--- PAGE 48 ---
+Title Bar
+Column header color
+Column header background
+Row background
+Alternating row background
+Font Color
+Allows you to set the color for each part of this widget.Vision Master Platform User Manual
+243
