@@ -9,6 +9,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <algorithm>
+
 using namespace eversight;
 
 CanvasViewModel::CanvasViewModel(QObject* parent)
@@ -133,6 +135,7 @@ QVariant CanvasViewModel::data(const QModelIndex& index, int role) const
     case WidthRole:       return w.width;
     case HeightRole:      return w.height;
     case TitleRole:       return w.title;
+    case SelectedRole:    return m_selectedWidgetIds.contains(w.id);
     case DataSourceRole:  return w.dataSource;
     case ControlTypeRole: return w.controlType;
     case ButtonColorRole: return w.buttonColor;
@@ -153,6 +156,7 @@ QHash<int, QByteArray> CanvasViewModel::roleNames() const
         { WidthRole,       "widgetWidth"       },
         { HeightRole,      "widgetHeight"      },
         { TitleRole,       "widgetTitle"       },
+        { SelectedRole,    "widgetSelected"    },
         { DataSourceRole,  "widgetDataSource"  },
         { ControlTypeRole, "widgetControlType" },
         { ButtonColorRole, "widgetButtonColor" },
@@ -198,6 +202,7 @@ void CanvasViewModel::addWidget(const QString& type)
 
 void CanvasViewModel::addWidgetAt(const QString& type, qreal x, qreal y)
 {
+    pushUndoState();
     beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
     WidgetItem item = createWidget(type);
     item.id = m_nextId++;
@@ -211,26 +216,49 @@ void CanvasViewModel::addWidgetAt(const QString& type, qreal x, qreal y)
     selectWidget(item.id);
 }
 
-void CanvasViewModel::selectWidget(int id)
+void CanvasViewModel::selectWidget(int id, bool additive)
 {
-    if (m_selectedWidgetId == id) return;
-    m_selectedWidgetId = id;
-    emit selectedWidgetChanged();
+    if (id < 0) {
+        clearSelection();
+        return;
+    }
+
+    if (indexOfWidget(id) < 0)
+        return;
+
+    QList<int> selected = additive ? m_selectedWidgetIds : QList<int>{};
+    if (additive && selected.contains(id)) {
+        selected.removeAll(id);
+        const int primaryId = selected.isEmpty() ? -1 : selected.last();
+        setSelection(selected, primaryId);
+        return;
+    }
+
+    if (!selected.contains(id))
+        selected.append(id);
+
+    setSelection(selected, id);
 }
 
-void CanvasViewModel::clearSelection()   { selectWidget(-1); }
+void CanvasViewModel::clearSelection()
+{
+    setSelection({}, -1);
+}
 
 void CanvasViewModel::removeSelectedWidget()
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0) return;
-    beginRemoveRows(QModelIndex(), row, row);
-    m_widgets.removeAt(row);
-    if (row >= 0 && row < m_screen.canvas.widgets.size())
-        m_screen.canvas.widgets.removeAt(row);
-    endRemoveRows();
-    emit widgetCountChanged();
+    const QList<int> rows = selectedRows();
+    if (rows.isEmpty()) return;
+
+    pushUndoState();
+    beginResetModel();
+    for (int i = rows.size() - 1; i >= 0; --i)
+        m_widgets.removeAt(rows.at(i));
+    syncScreenFromWidgets();
+    m_selectedWidgetIds.clear();
     m_selectedWidgetId = -1;
+    endResetModel();
+    emit widgetCountChanged();
     emit selectedWidgetChanged();
 }
 
@@ -238,6 +266,7 @@ void CanvasViewModel::duplicateSelectedWidget()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     if (row < 0) return;
+    pushUndoState();
     WidgetItem item = m_widgets.at(row);
     item.id     = m_nextId++;
     item.title += " Copy";
@@ -254,35 +283,56 @@ void CanvasViewModel::duplicateSelectedWidget()
 
 void CanvasViewModel::moveSelectedForward()
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0 || row >= m_widgets.size() - 1) return;
-    beginMoveRows(QModelIndex(), row, row, QModelIndex(), row + 2);
-    m_widgets.move(row, row + 1);
-    if (row >= 0 && row < m_screen.canvas.widgets.size() - 1)
-        m_screen.canvas.widgets.move(row, row + 1);
-    endMoveRows();
+    QList<int> rows = selectedRows();
+    if (rows.isEmpty() || rows.last() >= m_widgets.size() - 1) return;
+
+    pushUndoState();
+    beginResetModel();
+    std::sort(rows.begin(), rows.end(), std::greater<int>());
+    for (int row : rows) {
+        if (row < m_widgets.size() - 1 && !m_selectedWidgetIds.contains(m_widgets.at(row + 1).id))
+            m_widgets.move(row, row + 1);
+    }
+    syncScreenFromWidgets();
+    endResetModel();
+    emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::moveSelectedBackward()
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row <= 0) return;
-    beginMoveRows(QModelIndex(), row, row, QModelIndex(), row - 1);
-    m_widgets.move(row, row - 1);
-    if (row > 0 && row < m_screen.canvas.widgets.size())
-        m_screen.canvas.widgets.move(row, row - 1);
-    endMoveRows();
+    QList<int> rows = selectedRows();
+    if (rows.isEmpty() || rows.first() <= 0) return;
+
+    pushUndoState();
+    beginResetModel();
+    std::sort(rows.begin(), rows.end());
+    for (int row : rows) {
+        if (row > 0 && !m_selectedWidgetIds.contains(m_widgets.at(row - 1).id))
+            m_widgets.move(row, row - 1);
+    }
+    syncScreenFromWidgets();
+    endResetModel();
+    emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::bringSelectedToFront()
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0 || row >= m_widgets.size() - 1) return;
-    beginMoveRows(QModelIndex(), row, row, QModelIndex(), m_widgets.size());
-    m_widgets.move(row, m_widgets.size() - 1);
-    if (row >= 0 && row < m_screen.canvas.widgets.size())
-        m_screen.canvas.widgets.move(row, m_screen.canvas.widgets.size() - 1);
-    endMoveRows();
+    const QList<int> rows = selectedRows();
+    if (rows.isEmpty() || rows.last() >= m_widgets.size() - 1) return;
+
+    pushUndoState();
+    QList<WidgetItem> selected;
+    for (int row : rows)
+        selected.append(m_widgets.at(row));
+
+    beginResetModel();
+    for (int i = rows.size() - 1; i >= 0; --i)
+        m_widgets.removeAt(rows.at(i));
+    for (const WidgetItem& item : selected)
+        m_widgets.append(item);
+    syncScreenFromWidgets();
+    endResetModel();
+    emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::bringSelectedForward()
@@ -292,13 +342,22 @@ void CanvasViewModel::bringSelectedForward()
 
 void CanvasViewModel::sendSelectedToBack()
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row <= 0) return;
-    beginMoveRows(QModelIndex(), row, row, QModelIndex(), 0);
-    m_widgets.move(row, 0);
-    if (row >= 0 && row < m_screen.canvas.widgets.size())
-        m_screen.canvas.widgets.move(row, 0);
-    endMoveRows();
+    const QList<int> rows = selectedRows();
+    if (rows.isEmpty() || rows.first() <= 0) return;
+
+    pushUndoState();
+    QList<WidgetItem> selected;
+    for (int row : rows)
+        selected.append(m_widgets.at(row));
+
+    beginResetModel();
+    for (int i = rows.size() - 1; i >= 0; --i)
+        m_widgets.removeAt(rows.at(i));
+    for (int i = selected.size() - 1; i >= 0; --i)
+        m_widgets.prepend(selected.at(i));
+    syncScreenFromWidgets();
+    endResetModel();
+    emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::sendSelectedBackward()
@@ -308,22 +367,82 @@ void CanvasViewModel::sendSelectedBackward()
 
 void CanvasViewModel::distributeSelectedHorizontal()
 {
-    // Stub: distribution logic not implemented (UI-only integration)
+    QList<int> rows = selectedRows();
+    if (rows.size() < 3) return;
+
+    std::sort(rows.begin(), rows.end(), [this](int a, int b) {
+        return m_widgets.at(a).x < m_widgets.at(b).x;
+    });
+
+    qreal left = m_widgets.at(rows.first()).x;
+    qreal right = m_widgets.at(rows.first()).x + m_widgets.at(rows.first()).width;
+    qreal totalWidth = 0;
+    for (int row : rows) {
+        const WidgetItem& w = m_widgets.at(row);
+        left = qMin(left, w.x);
+        right = qMax(right, w.x + w.width);
+        totalWidth += w.width;
+    }
+
+    const qreal spacing = (right - left - totalWidth) / qreal(rows.size() - 1);
+    pushUndoState();
+    qreal x = left;
+    for (int row : rows) {
+        m_widgets[row].x = x;
+        x += m_widgets[row].width + spacing;
+    }
+    syncScreenFromWidgets();
+    emitAllWidgetDataChanged();
+    emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::distributeSelectedVertical()
 {
-    // Stub: distribution logic not implemented (UI-only integration)
+    QList<int> rows = selectedRows();
+    if (rows.size() < 3) return;
+
+    std::sort(rows.begin(), rows.end(), [this](int a, int b) {
+        return m_widgets.at(a).y < m_widgets.at(b).y;
+    });
+
+    qreal top = m_widgets.at(rows.first()).y;
+    qreal bottom = m_widgets.at(rows.first()).y + m_widgets.at(rows.first()).height;
+    qreal totalHeight = 0;
+    for (int row : rows) {
+        const WidgetItem& w = m_widgets.at(row);
+        top = qMin(top, w.y);
+        bottom = qMax(bottom, w.y + w.height);
+        totalHeight += w.height;
+    }
+
+    const qreal spacing = (bottom - top - totalHeight) / qreal(rows.size() - 1);
+    pushUndoState();
+    qreal y = top;
+    for (int row : rows) {
+        m_widgets[row].y = y;
+        y += m_widgets[row].height + spacing;
+    }
+    syncScreenFromWidgets();
+    emitAllWidgetDataChanged();
+    emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::undo()
 {
-    // Stub: undo stack not implemented yet
+    if (m_undoStack.isEmpty()) return;
+    m_redoStack.append(snapshot());
+    const StateSnapshot state = m_undoStack.takeLast();
+    restoreSnapshot(state);
+    emit undoRedoChanged();
 }
 
 void CanvasViewModel::redo()
 {
-    // Stub: redo stack not implemented yet
+    if (m_redoStack.isEmpty()) return;
+    m_undoStack.append(snapshot());
+    const StateSnapshot state = m_redoStack.takeLast();
+    restoreSnapshot(state);
+    emit undoRedoChanged();
 }
 
 void CanvasViewModel::fitToWindow()
@@ -331,19 +450,37 @@ void CanvasViewModel::fitToWindow()
     // Stub: fit-to-window handled by view layer or later implementation
 }
 
+int CanvasViewModel::fittedZoomPercent(qreal viewportWidth, qreal viewportHeight,
+                                       qreal designWidth, qreal designHeight,
+                                       qreal horizontalPadding, qreal verticalPadding) const
+{
+    if (viewportWidth <= 0 || viewportHeight <= 0 || designWidth <= 0 || designHeight <= 0)
+        return 100;
+
+    const qreal availableWidth = qMax<qreal>(1.0, viewportWidth - horizontalPadding);
+    const qreal availableHeight = qMax<qreal>(1.0, viewportHeight - verticalPadding);
+    const qreal fit = qMin(availableWidth / designWidth, availableHeight / designHeight);
+    return qBound(40, int(fit * 100.0), 160);
+}
+
 void CanvasViewModel::alignSelected(const QString& mode, qreal canvasWidth, qreal canvasHeight)
 {
-    const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0) return;
-    WidgetItem& w = m_widgets[row];
-    if      (mode == "left")    w.x = 0;
-    else if (mode == "hcenter") w.x = (canvasWidth  - w.width)  / 2.0;
-    else if (mode == "right")   w.x = canvasWidth  - w.width;
-    else if (mode == "top")     w.y = 0;
-    else if (mode == "vcenter") w.y = (canvasHeight - w.height) / 2.0;
-    else if (mode == "bottom")  w.y = canvasHeight - w.height;
-    const QModelIndex mi = index(row, 0);
-    emit dataChanged(mi, mi, { XRole, YRole });
+    const QList<int> rows = selectedRows();
+    if (rows.isEmpty()) return;
+
+    pushUndoState();
+    for (int row : rows) {
+        WidgetItem& w = m_widgets[row];
+        if      (mode == "left")    w.x = 0;
+        else if (mode == "hcenter") w.x = (canvasWidth  - w.width)  / 2.0;
+        else if (mode == "right")   w.x = canvasWidth  - w.width;
+        else if (mode == "top")     w.y = 0;
+        else if (mode == "vcenter") w.y = (canvasHeight - w.height) / 2.0;
+        else if (mode == "bottom")  w.y = canvasHeight - w.height;
+    }
+
+    syncScreenFromWidgets();
+    emitAllWidgetDataChanged();
     emit selectedWidgetChanged();
 }
 
@@ -352,6 +489,11 @@ void CanvasViewModel::updateWidgetGeometry(int id, qreal x, qreal y, qreal width
     const int row = indexOfWidget(id);
     if (row < 0) return;
     WidgetItem& w = m_widgets[row];
+    if (qFuzzyCompare(w.x, x) && qFuzzyCompare(w.y, y)
+            && qFuzzyCompare(w.width, width) && qFuzzyCompare(w.height, height))
+        return;
+
+    pushUndoState();
     w.x = x; w.y = y;
     w.width  = qMax<qreal>(24, width);
     w.height = qMax<qreal>(24, height);
@@ -367,6 +509,8 @@ void CanvasViewModel::updateSelectedTitle(const QString& title)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     if (row < 0) return;
+    if (m_widgets[row].title == title) return;
+    pushUndoState();
     m_widgets[row].title = title;
     emit dataChanged(index(row,0), index(row,0), { TitleRole });
     emit selectedWidgetChanged();
@@ -376,6 +520,8 @@ void CanvasViewModel::updateSelectedData(const QString& dataSource, const QStrin
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     if (row < 0) return;
+    if (m_widgets[row].dataSource == dataSource && m_widgets[row].controlType == controlType) return;
+    pushUndoState();
     m_widgets[row].dataSource  = dataSource;
     m_widgets[row].controlType = controlType;
     emit dataChanged(index(row,0), index(row,0), { DataSourceRole, ControlTypeRole });
@@ -386,6 +532,11 @@ void CanvasViewModel::updateSelectedAppearance(const QString& buttonColor, const
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     if (row < 0) return;
+    if (m_widgets[row].buttonColor == buttonColor
+            && m_widgets[row].borderColor == borderColor
+            && m_widgets[row].iconColor == iconColor)
+        return;
+    pushUndoState();
     m_widgets[row].buttonColor = buttonColor;
     m_widgets[row].borderColor = borderColor;
     m_widgets[row].iconColor   = iconColor;
@@ -397,6 +548,8 @@ void CanvasViewModel::updateSelectedAutoFill(bool autoFill)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     if (row < 0) return;
+    if (m_widgets[row].autoFill == autoFill) return;
+    pushUndoState();
     m_widgets[row].autoFill = autoFill;
     emit dataChanged(index(row,0), index(row,0), { AutoFillRole });
     emit selectedWidgetChanged();
@@ -405,6 +558,7 @@ void CanvasViewModel::updateSelectedAutoFill(bool autoFill)
 void CanvasViewModel::clear()
 {
     if (m_widgets.isEmpty()) return;
+    pushUndoState();
     beginResetModel();
     m_widgets.clear();
     // Keep shadow screen model empty as well
@@ -479,6 +633,7 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
     m_widgets          = loaded;
     m_nextId           = qMax(root["nextId"].toInt(maxId + 1), maxId + 1);
     m_selectedWidgetId = -1;
+    m_selectedWidgetIds.clear();
     // Rebuild shadow screen model to mirror loaded widgets
     m_screen.canvas.widgets.clear();
     for (const WidgetItem &w : qAsConst(m_widgets))
@@ -486,6 +641,9 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
     endResetModel();
     emit widgetCountChanged();
     emit selectedWidgetChanged();
+    m_undoStack.clear();
+    m_redoStack.clear();
+    emit undoRedoChanged();
     return true;
 }
 
@@ -504,7 +662,10 @@ QString CanvasViewModel::selectedBorderColor()  const { auto* w = selectedWidget
 QString CanvasViewModel::selectedIconColor()    const { auto* w = selectedWidget(); return w ? w->iconColor   : QString(); }
 bool    CanvasViewModel::selectedAutoFill()     const { auto* w = selectedWidget(); return w ? w->autoFill    : false; }
 bool    CanvasViewModel::hasSelection()         const { return selectedWidget() != nullptr; }
+int     CanvasViewModel::selectedCount()        const { return m_selectedWidgetIds.size(); }
 int     CanvasViewModel::widgetCount()          const { return m_widgets.size(); }
+bool    CanvasViewModel::canUndo()              const { return !m_undoStack.isEmpty(); }
+bool    CanvasViewModel::canRedo()              const { return !m_redoStack.isEmpty(); }
 
 int CanvasViewModel::indexOfWidget(int id) const
 {
@@ -517,4 +678,83 @@ const WidgetItem* CanvasViewModel::selectedWidget() const
 {
     const int row = indexOfWidget(m_selectedWidgetId);
     return row >= 0 ? &m_widgets.at(row) : nullptr;
+}
+
+QList<int> CanvasViewModel::selectedRows() const
+{
+    QList<int> rows;
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        if (m_selectedWidgetIds.contains(m_widgets.at(i).id))
+            rows.append(i);
+    }
+    return rows;
+}
+
+CanvasViewModel::StateSnapshot CanvasViewModel::snapshot() const
+{
+    StateSnapshot state;
+    state.widgets = m_widgets;
+    state.selectedWidgetIds = m_selectedWidgetIds;
+    state.primarySelectedWidgetId = m_selectedWidgetId;
+    state.nextId = m_nextId;
+    return state;
+}
+
+void CanvasViewModel::restoreSnapshot(const StateSnapshot& state)
+{
+    beginResetModel();
+    m_widgets = state.widgets;
+    m_selectedWidgetIds = state.selectedWidgetIds;
+    m_selectedWidgetId = state.primarySelectedWidgetId;
+    m_nextId = state.nextId;
+    syncScreenFromWidgets();
+    endResetModel();
+
+    emit widgetCountChanged();
+    emit selectedWidgetChanged();
+}
+
+void CanvasViewModel::pushUndoState()
+{
+    m_undoStack.append(snapshot());
+    if (m_undoStack.size() > 100)
+        m_undoStack.removeFirst();
+    m_redoStack.clear();
+    emit undoRedoChanged();
+}
+
+void CanvasViewModel::syncScreenFromWidgets()
+{
+    m_screen.canvas.widgets.clear();
+    for (const WidgetItem& w : qAsConst(m_widgets))
+        m_screen.canvas.widgets.append(eversight::toWidgetModel(w));
+}
+
+void CanvasViewModel::emitAllWidgetDataChanged()
+{
+    if (m_widgets.isEmpty())
+        return;
+
+    emit dataChanged(index(0, 0), index(m_widgets.size() - 1, 0),
+                     { XRole, YRole, WidthRole, HeightRole, SelectedRole });
+}
+
+void CanvasViewModel::setSelection(const QList<int>& ids, int primaryId)
+{
+    QList<int> normalized;
+    for (int id : ids) {
+        if (indexOfWidget(id) >= 0 && !normalized.contains(id))
+            normalized.append(id);
+    }
+
+    if (primaryId >= 0 && !normalized.contains(primaryId))
+        primaryId = normalized.isEmpty() ? -1 : normalized.last();
+
+    if (m_selectedWidgetIds == normalized && m_selectedWidgetId == primaryId)
+        return;
+
+    m_selectedWidgetIds = normalized;
+    m_selectedWidgetId = normalized.isEmpty() ? -1 : primaryId;
+    emitAllWidgetDataChanged();
+    emit selectedWidgetChanged();
 }

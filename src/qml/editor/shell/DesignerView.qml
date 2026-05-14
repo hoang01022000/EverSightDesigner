@@ -32,32 +32,38 @@ Item {
             onSaveTemplateRequested: statusText.text = "Save template requested"
 
             // Layer
-            onBringToFrontRequested: statusText.text = "Bring to front requested"
+            onBringToFrontRequested: canvasViewModel.bringSelectedToFront()
             onBringForwardRequested: canvasViewModel.moveSelectedForward()
-            onSendToBackRequested: statusText.text = "Send to back requested"
+            onSendToBackRequested: canvasViewModel.sendSelectedToBack()
             onSendBackwardRequested: canvasViewModel.moveSelectedBackward()
 
             // Alignment
-            onAlignLeftRequested: canvasViewModel.alignSelected("left", designCanvas.width, designCanvas.height)
-            onAlignCenterRequested: canvasViewModel.alignSelected("hcenter", designCanvas.width, designCanvas.height)
-            onAlignRightRequested: canvasViewModel.alignSelected("right", designCanvas.width, designCanvas.height)
-            onAlignTopRequested: canvasViewModel.alignSelected("top", designCanvas.width, designCanvas.height)
-            onAlignMiddleRequested: canvasViewModel.alignSelected("vcenter", designCanvas.width, designCanvas.height)
-            onAlignBottomRequested: canvasViewModel.alignSelected("bottom", designCanvas.width, designCanvas.height)
+            onAlignLeftRequested: canvasViewModel.alignSelected("left", designCanvas.designWidth, designCanvas.designHeight)
+            onAlignCenterRequested: canvasViewModel.alignSelected("hcenter", designCanvas.designWidth, designCanvas.designHeight)
+            onAlignRightRequested: canvasViewModel.alignSelected("right", designCanvas.designWidth, designCanvas.designHeight)
+            onAlignTopRequested: canvasViewModel.alignSelected("top", designCanvas.designWidth, designCanvas.designHeight)
+            onAlignMiddleRequested: canvasViewModel.alignSelected("vcenter", designCanvas.designWidth, designCanvas.designHeight)
+            onAlignBottomRequested: canvasViewModel.alignSelected("bottom", designCanvas.designWidth, designCanvas.designHeight)
 
             // Distribution
-            onDistributeHorizontalRequested: statusText.text = "Distribute horizontally requested"
-            onDistributeVerticalRequested: statusText.text = "Distribute vertically requested"
+            onDistributeHorizontalRequested: canvasViewModel.distributeSelectedHorizontal()
+            onDistributeVerticalRequested: canvasViewModel.distributeSelectedVertical()
 
             // Edit
-            onUndoRequested: statusText.text = "Undo requested"
-            onRedoRequested: statusText.text = "Redo requested"
+            onUndoRequested: canvasViewModel.undo()
+            onRedoRequested: canvasViewModel.redo()
             onDeleteRequested: canvasViewModel.removeSelectedWidget()
             onDuplicateRequested: canvasViewModel.duplicateSelectedWidget()
 
             // View
             onZoomChanged: function(value) { root.zoomPercent = value }
-            onFitToWindowRequested: statusText.text = "Fit to window requested"
+            onFitToWindowRequested: root.zoomPercent = canvasViewModel.fittedZoomPercent(
+                                        designCanvas.width,
+                                        designCanvas.height,
+                                        designCanvas.designWidth,
+                                        designCanvas.designHeight,
+                                        designCanvas.viewportHorizontalPadding,
+                                        designCanvas.viewportVerticalPadding)
 
             // Fixed area
             onToggleTopRequested: fixedBarViewModel.setTopVisible(!fixedBarViewModel.topVisible)
@@ -75,8 +81,21 @@ Item {
         // Keep toolbar enabled state in sync with selection
         Connections {
             target: canvasViewModel
-            onSelectedWidgetChanged: topBar.updateActionStates(canvasViewModel.hasSelection ? 1 : 0)
-            onWidgetCountChanged: topBar.updateActionStates(canvasViewModel.hasSelection ? 1 : 0)
+            function onSelectedWidgetChanged() {
+                topBar.updateActionStates(canvasViewModel.selectedCount,
+                                          canvasViewModel.canUndo,
+                                          canvasViewModel.canRedo)
+            }
+            function onWidgetCountChanged() {
+                topBar.updateActionStates(canvasViewModel.selectedCount,
+                                          canvasViewModel.canUndo,
+                                          canvasViewModel.canRedo)
+            }
+            function onUndoRedoChanged() {
+                topBar.updateActionStates(canvasViewModel.selectedCount,
+                                          canvasViewModel.canUndo,
+                                          canvasViewModel.canRedo)
+            }
         }
 
         RowLayout {
@@ -92,80 +111,11 @@ Item {
                 }
             }
 
-            ColumnLayout {
+            DesignCanvas {
+                id: designCanvas
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 0
-
-                Rectangle { // Top fixed bar area
-                    id: topFixedBar
-                    color: "#0f1724"
-                    Layout.fillWidth: true
-                    implicitHeight: fixedBarViewModel.topVisible ? fixedBarViewModel.topHeight : 0
-                    height: implicitHeight
-                    visible: fixedBarViewModel.topVisible
-
-                    Label {
-                        anchors.centerIn: parent
-                        text: "Top Fixed Bar"
-                        color: "#cbd5e1"
-                        font.pixelSize: 14
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    spacing: 0
-
-                    Rectangle { // Left fixed bar
-                        id: leftFixedBar
-                        color: "#0b1220"
-                        Layout.preferredWidth: fixedBarViewModel.leftVisible ? fixedBarViewModel.leftWidth : 0
-                        width: Layout.preferredWidth
-                        visible: fixedBarViewModel.leftVisible
-                    }
-
-                    DesignCanvas {
-                        id: designCanvas
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        zoom: root.zoomPercent / 100
-                    }
-
-                    Rectangle { // Right fixed bar
-                        id: rightFixedBar
-                        color: "#0b1220"
-                        Layout.preferredWidth: fixedBarViewModel.rightVisible ? fixedBarViewModel.rightWidth : 0
-                        width: Layout.preferredWidth
-                        visible: fixedBarViewModel.rightVisible
-                    }
-                }
-
-                Rectangle { // Bottom fixed bar
-                    id: bottomFixedBar
-                    color: "#0f1724"
-                    Layout.fillWidth: true
-                    implicitHeight: fixedBarViewModel.bottomVisible ? fixedBarViewModel.bottomHeight : 0
-                    height: implicitHeight
-                    visible: fixedBarViewModel.bottomVisible
-
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 12
-
-                        Label {
-                            text: "Device: Connected"
-                            color: "#9ca3af"
-                        }
-
-                        Label {
-                            text: "Status: OK"
-                            color: "#9ca3af"
-                        }
-                    }
-                }
+                zoom: root.zoomPercent / 100
             }
 
             InspectorPanel {

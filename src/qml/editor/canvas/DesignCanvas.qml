@@ -7,6 +7,8 @@ Item {
     property real zoom: 0.84
     readonly property real designWidth: 1280
     readonly property real designHeight: 720
+    readonly property real viewportHorizontalPadding: 48
+    readonly property real viewportVerticalPadding: 48
 
     Rectangle {
         anchors.fill: parent
@@ -40,15 +42,18 @@ Item {
     }
 
     Flickable {
+        id: canvasFlickable
         anchors.fill: parent
-        contentWidth: Math.max(width, stageFrame.width * root.zoom + 96)
-        contentHeight: Math.max(height, stageFrame.height * root.zoom + 96)
+        contentWidth: Math.max(width, stageFrame.width * root.zoom + root.viewportHorizontalPadding)
+        contentHeight: Math.max(height, stageFrame.height * root.zoom + root.viewportVerticalPadding)
         clip: true
 
         Item {
             id: zoomLayer
-            x: 48
-            y: 40
+            x: Math.max(root.viewportHorizontalPadding / 2,
+                        (canvasFlickable.width - stageFrame.width * root.zoom) / 2)
+            y: Math.max(root.viewportVerticalPadding / 2,
+                        (canvasFlickable.height - stageFrame.height * root.zoom) / 2)
             width: stageFrame.width * root.zoom
             height: stageFrame.height * root.zoom
             scale: root.zoom
@@ -88,6 +93,54 @@ Item {
                             ctx.stroke()
                         }
                     }
+                }
+
+                Rectangle {
+                    id: topFixedArea
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    height: fixedBarViewModel.topVisible ? fixedBarViewModel.topHeight : 0
+                    visible: fixedBarViewModel.topVisible
+                    color: "#1b1b1b"
+                    border.color: "#242424"
+                    z: 2
+                }
+
+                Rectangle {
+                    id: bottomFixedArea
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: fixedBarViewModel.bottomVisible ? fixedBarViewModel.bottomHeight : 0
+                    visible: fixedBarViewModel.bottomVisible
+                    color: "#1b1b1b"
+                    border.color: "#242424"
+                    z: 2
+                }
+
+                Rectangle {
+                    id: leftFixedArea
+                    anchors.left: parent.left
+                    anchors.top: topFixedArea.bottom
+                    anchors.bottom: bottomFixedArea.top
+                    width: fixedBarViewModel.leftVisible ? fixedBarViewModel.leftWidth : 0
+                    visible: fixedBarViewModel.leftVisible
+                    color: "#202020"
+                    border.color: "#2b2b2b"
+                    z: 2
+                }
+
+                Rectangle {
+                    id: rightFixedArea
+                    anchors.right: parent.right
+                    anchors.top: topFixedArea.bottom
+                    anchors.bottom: bottomFixedArea.top
+                    width: fixedBarViewModel.rightVisible ? fixedBarViewModel.rightWidth : 0
+                    visible: fixedBarViewModel.rightVisible
+                    color: "#202020"
+                    border.color: "#2b2b2b"
+                    z: 2
                 }
 
                 /* Sample widgets removed to leave a blank design surface.
@@ -150,15 +203,15 @@ Item {
                         buttonColor: model.widgetButtonColor
                         borderColorValue: model.widgetBorderColor
                         iconColor: model.widgetIconColor
-                        selected: canvasViewModel.selectedWidgetId === model.widgetId
+                        selected: model.widgetSelected
 
                         x: model.widgetX
                         y: model.widgetY
                         width: model.widgetWidth
                         height: model.widgetHeight
 
-                        onSelectedRequested: function(id) {
-                            canvasViewModel.selectWidget(id)
+                        onSelectedRequested: function(id, additive) {
+                            canvasViewModel.selectWidget(id, additive)
                         }
 
                         onGeometryCommitted: function(id, newX, newY, newWidth, newHeight) {

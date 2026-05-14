@@ -14,7 +14,7 @@ Item {
     property bool selected: false
 
     // --- Signals ---
-    signal selectedRequested(int id)
+    signal selectedRequested(int id, bool additive)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
 
     // --- Logic tự động tìm Widget theo thư mục ---
@@ -87,9 +87,9 @@ Item {
         drag.target: root
         drag.threshold: 8
 
-        onPressed: {
+        onPressed: function(mouse) {
             root.z = 999 // Đưa lên trên cùng khi đang thao tác
-            root.selectedRequested(root.widgetId)
+            root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
         }
         onReleased: {
             root.z = 1
@@ -101,7 +101,8 @@ Item {
     // Component con dùng chung cho các góc và cạnh
     component ResizeHandle: Rectangle {
         property int handlePos: 0 // 0:TL, 1:T, 2:TR, 3:R, 4:BR, 5:B, 6:BL, 7:L
-        width: 10; height: 10
+        width: 8
+        height: 8
         color: "#ffffff"
         border.color: "#1e9bff"
         border.width: 1
@@ -126,7 +127,7 @@ Item {
                 sW = root.width; sH = root.height
                 sX = root.x; sY = root.y
                 sMX = mouse.x; sMY = mouse.y
-                root.selectedRequested(root.widgetId)
+                root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
             }
 
             onPositionChanged: (mouse) => {
@@ -156,12 +157,56 @@ Item {
     }
 
     // Đặt 8 điểm điều khiển vào các góc và trung điểm cạnh
-    ResizeHandle { handlePos: 0; anchors.centerIn: parent.topLeft }
-    ResizeHandle { handlePos: 1; anchors.centerIn: parent.top }
-    ResizeHandle { handlePos: 2; anchors.centerIn: parent.topRight }
-    ResizeHandle { handlePos: 3; anchors.centerIn: parent.right }
-    ResizeHandle { handlePos: 4; anchors.centerIn: parent.bottomRight }
-    ResizeHandle { handlePos: 5; anchors.centerIn: parent.bottom }
-    ResizeHandle { handlePos: 6; anchors.centerIn: parent.bottomLeft }
-    ResizeHandle { handlePos: 7; anchors.centerIn: parent.left }
+    ResizeHandle {
+        handlePos: 0
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.leftMargin: -width / 2
+        anchors.topMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 1
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 2
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: -width / 2
+        anchors.topMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 3
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.rightMargin: -width / 2
+    }
+    ResizeHandle {
+        handlePos: 4
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: -width / 2
+        anchors.bottomMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 5
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 6
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: -width / 2
+        anchors.bottomMargin: -height / 2
+    }
+    ResizeHandle {
+        handlePos: 7
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: -width / 2
+    }
 }

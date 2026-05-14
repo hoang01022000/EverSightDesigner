@@ -1,18 +1,11 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QList>
 #include "../../shared/models/WidgetItem.h"
 #include "../../shared/models/ScreenModel.h"
 #include "../../shared/models/CanvasTabModel.h"
 #include "../../shared/models/FixedBarState.h"
-
-    Q_PROPERTY(bool topFixedVisible READ isTopFixedVisible NOTIFY fixedBarChanged)
-    Q_PROPERTY(bool bottomFixedVisible READ isBottomFixedVisible NOTIFY fixedBarChanged)
-    Q_PROPERTY(bool leftFixedVisible READ isLeftFixedVisible NOTIFY fixedBarChanged)
-    Q_PROPERTY(bool rightFixedVisible READ isRightFixedVisible NOTIFY fixedBarChanged)
-
-    Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabChanged)
-    Q_PROPERTY(int tabCount READ tabCount NOTIFY tabsChanged)
 
 class CanvasViewModel : public QAbstractListModel
 {
@@ -32,12 +25,21 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(QString selectedIconColor    READ selectedIconColor    NOTIFY selectedWidgetChanged)
     Q_PROPERTY(bool    selectedAutoFill     READ selectedAutoFill     NOTIFY selectedWidgetChanged)
     Q_PROPERTY(bool    hasSelection         READ hasSelection         NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(int     selectedCount        READ selectedCount        NOTIFY selectedWidgetChanged)
     Q_PROPERTY(int     widgetCount          READ widgetCount          NOTIFY widgetCountChanged)
+    Q_PROPERTY(bool    canUndo              READ canUndo              NOTIFY undoRedoChanged)
+    Q_PROPERTY(bool    canRedo              READ canRedo              NOTIFY undoRedoChanged)
     Q_PROPERTY(int     currentBasicLayout   READ currentBasicLayout   NOTIFY layoutChanged)
     Q_PROPERTY(int     currentSplitTemplate READ currentSplitTemplate NOTIFY layoutChanged)
     Q_PROPERTY(bool    currentShowGrid      READ currentShowGrid      NOTIFY layoutChanged)
     Q_PROPERTY(QString currentGridLineColor READ currentGridLineColor NOTIFY layoutChanged)
     Q_PROPERTY(QString currentBackgroundColor READ currentBackgroundColor NOTIFY layoutChanged)
+    Q_PROPERTY(bool topFixedVisible READ isTopFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool bottomFixedVisible READ isBottomFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool leftFixedVisible READ isLeftFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool rightFixedVisible READ isRightFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabChanged)
+    Q_PROPERTY(int tabCount READ tabCount NOTIFY tabsChanged)
 
 public:
     explicit CanvasViewModel(QObject* parent = nullptr);
@@ -45,7 +47,7 @@ public:
     enum Roles {
         IdRole = Qt::UserRole + 1,
         TypeRole, XRole, YRole, WidthRole, HeightRole,
-        TitleRole, DataSourceRole, ControlTypeRole,
+        TitleRole, SelectedRole, DataSourceRole, ControlTypeRole,
         ButtonColorRole, BorderColorRole, IconColorRole, AutoFillRole
     };
 
@@ -55,7 +57,7 @@ public:
 
     Q_INVOKABLE void addWidget(const QString& type);
     Q_INVOKABLE void addWidgetAt(const QString& type, qreal x, qreal y);
-    Q_INVOKABLE void selectWidget(int id);
+    Q_INVOKABLE void selectWidget(int id, bool additive = false);
     Q_INVOKABLE void clearSelection();
     Q_INVOKABLE void removeSelectedWidget();
     Q_INVOKABLE void duplicateSelectedWidget();
@@ -76,6 +78,9 @@ public:
     Q_INVOKABLE void undo();
     Q_INVOKABLE void redo();
     Q_INVOKABLE void fitToWindow();
+    Q_INVOKABLE int fittedZoomPercent(qreal viewportWidth, qreal viewportHeight,
+                                      qreal designWidth, qreal designHeight,
+                                      qreal horizontalPadding, qreal verticalPadding) const;
     Q_INVOKABLE void clear();
     Q_INVOKABLE bool saveToFile(const QString& filePath) const;
     Q_INVOKABLE bool loadFromFile(const QString& filePath);
@@ -115,24 +120,46 @@ public:
     QString selectedIconColor()    const;
     bool    selectedAutoFill()     const;
     bool    hasSelection()         const;
+    int     selectedCount()        const;
     int     widgetCount()          const;
+    bool    canUndo()              const;
+    bool    canRedo()              const;
 
 signals:
     void selectedWidgetChanged();
     void widgetCountChanged();
+    void undoRedoChanged();
     void fixedBarChanged();
     void tabsChanged();
     void activeTabChanged();
     void layoutChanged();
 
 private:
+    struct StateSnapshot
+    {
+        QList<WidgetItem> widgets;
+        QList<int> selectedWidgetIds;
+        int primarySelectedWidgetId = -1;
+        int nextId = 1;
+    };
+
     WidgetItem        createWidget(const QString& type) const;
     int               indexOfWidget(int id) const;
     const WidgetItem* selectedWidget() const;
+    QList<int>        selectedRows() const;
+    StateSnapshot     snapshot() const;
+    void              restoreSnapshot(const StateSnapshot& state);
+    void              pushUndoState();
+    void              syncScreenFromWidgets();
+    void              emitAllWidgetDataChanged();
+    void              setSelection(const QList<int>& ids, int primaryId);
 
     QList<WidgetItem> m_widgets;
     int               m_nextId           = 1;
     int               m_selectedWidgetId = -1;
+    QList<int>        m_selectedWidgetIds;
+    QList<StateSnapshot> m_undoStack;
+    QList<StateSnapshot> m_redoStack;
     eversight::ScreenModel m_screen;
     QList<eversight::CanvasTabModel> m_tabs;
     int m_activeTab = 0;

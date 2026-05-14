@@ -155,9 +155,12 @@ Rectangle {
         border.width: 1
 
         Flickable {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: runtimeButtons.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
             anchors.leftMargin: 8
-            anchors.rightMargin: 8
+            anchors.rightMargin: 12
             contentWidth: toolbarRow.implicitWidth
             contentHeight: height
             flickableDirection: Flickable.HorizontalFlick
@@ -231,15 +234,22 @@ Rectangle {
                 IconButton { action: actToggleLeft; fallbackText: "Left"; glyph: "\u25e7" }
                 IconButton { action: actToggleRight; fallbackText: "Right"; glyph: "\u25e8" }
 
-                Item { width: 16; height: 1 }
-
-                TextButton { action: actPreview }
-                TextButton { action: actExport }
             }
+        }
+
+        Row {
+            id: runtimeButtons
+            anchors.right: parent.right
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 6
+
+            TextButton { action: actPreview }
+            TextButton { action: actExport }
         }
     }
 
-    function updateActionStates(selectedCount) {
+    function updateActionStates(selectedCount, canUndo, canRedo) {
         var hasSelection = selectedCount > 0
         var multipleSelection = selectedCount > 1
 
@@ -258,6 +268,8 @@ Rectangle {
 
         actDistributeH.enabled = multipleSelection
         actDistributeV.enabled = multipleSelection
+        actUndo.enabled = canUndo
+        actRedo.enabled = canRedo
     }
 
     component IconButton: ToolButton {
