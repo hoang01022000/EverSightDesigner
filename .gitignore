@@ -1,8 +1,10 @@
 # Build folders
 build/
+build-*/
 out/
 
 # Qt Creator
+.qtcreator/
 *.pro.user
 *.qmlproject.user
 *.qmlls.ini
@@ -11,6 +13,15 @@ out/
 # CMake
 CMakeCache.txt
 CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+.cmake/
+.qt/
+.rcc/
+meta_types/
+qmltypes/
+*_autogen/
 CMakeUserPresets.json
 
 # Visual Studio / VSCode

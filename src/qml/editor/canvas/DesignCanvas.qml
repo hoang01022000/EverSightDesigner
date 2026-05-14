@@ -127,8 +127,10 @@ Item {
                             if (targetCell)
                                 canvasViewModel.selectLayoutCell(targetCell.id,
                                                                  (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
-                            else
+                            else {
                                 canvasViewModel.clearSelection()
+                                canvasViewModel.clearLayoutCellSelection()
+                            }
                         }
                     }
 
@@ -182,12 +184,11 @@ Item {
 
                             Rectangle {
                                 anchors.fill: parent
-                                color: dropArea.containsDrag ? "#ff7a0024"
-                                                             : (cell.selected ? "#1e9bff22"
-                                                                              : (regionContainer.hovered ? "#ffffff0c" : "transparent"))
+                                color: "transparent"
                                 border.color: cell.selected || dropArea.containsDrag ? "#ff9a2c"
-                                                   : (regionContainer.hovered ? "#8b949e" : "#5b6268")
-                                border.width: cell.selected || dropArea.containsDrag || regionContainer.hovered ? 2 : 1
+                                                   : (regionContainer.hovered ? "#7b858e" : "#4d555c")
+                                border.width: cell.selected || dropArea.containsDrag ? 2
+                                             : (regionContainer.hovered ? 1 : 1)
                             }
 
                             HoverHandler {
@@ -262,56 +263,36 @@ Item {
                     Repeater {
                         model: canvasViewModel.layoutResizeHandles.length
 
-                        delegate: Item {
+                        delegate: SplitterHandle {
                             required property int index
                             readonly property var handle: canvasViewModel.layoutResizeHandles[index]
 
-                            x: handle.x * editableArea.width - width / 2
-                            y: handle.y * editableArea.height - height / 2
-                            width: 18
-                            height: 18
+                            orientation: handle.orientation
+                            coordinateItem: editableArea
+                            x: handle.orientation === "vertical"
+                               ? handle.x * editableArea.width - width / 2
+                               : handle.start * editableArea.width
+                            y: handle.orientation === "vertical"
+                               ? handle.start * editableArea.height
+                               : handle.y * editableArea.height - height / 2
+                            width: handle.orientation === "vertical"
+                                   ? 12
+                                   : Math.max(36, handle.length * editableArea.width)
+                            height: handle.orientation === "vertical"
+                                    ? Math.max(36, handle.length * editableArea.height)
+                                    : 12
                             z: 5000
 
-                            Canvas {
-                                anchors.fill: parent
-                                rotation: handle.orientation === "vertical" ? 90 : 0
-                                onPaint: {
-                                    var ctx = getContext("2d")
-                                    ctx.clearRect(0, 0, width, height)
-                                    ctx.fillStyle = "#ff7a00"
-                                    ctx.beginPath()
-                                    ctx.moveTo(width / 2, 2)
-                                    ctx.lineTo(width - 2, height - 2)
-                                    ctx.lineTo(2, height - 2)
-                                    ctx.closePath()
-                                    ctx.fill()
-                                }
+                            onDragged: function(deltaRatio) {
+                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
+                                                                  String(handle.secondCellId),
+                                                                  handle.orientation,
+                                                                  deltaRatio)
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -6
-                                cursorShape: handle.orientation === "vertical" ? Qt.SizeHorCursor : Qt.SizeVerCursor
-
-                                property real lastX: 0
-                                property real lastY: 0
-
-                                onPressed: function(mouse) {
-                                    lastX = mouse.x
-                                    lastY = mouse.y
-                                }
-
-                                onPositionChanged: function(mouse) {
-                                    var delta = handle.orientation === "vertical"
-                                            ? (mouse.x - lastX) / editableArea.width
-                                            : (mouse.y - lastY) / editableArea.height
-                                    lastX = mouse.x
-                                    lastY = mouse.y
-                                    canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
-                                                                      String(handle.secondCellId),
-                                                                      handle.orientation,
-                                                                      delta)
-                                }
+                            onMergeRequested: {
+                                canvasViewModel.mergeLayoutSiblings(handle.firstCellId,
+                                                                    handle.secondCellId)
                             }
                         }
                     }

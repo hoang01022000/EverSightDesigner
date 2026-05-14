@@ -227,7 +227,7 @@ void CanvasViewModel::splitSelectedLayoutCells(int rows, int columns)
     columns = qBound(1, columns, 10);
     QList<int> selected = layout->selectedCellIds;
     if (selected.isEmpty())
-        selected.append(layout->root.id);
+        return;
 
     for (int id : qAsConst(selected)) {
         LayoutNode* node = findLayoutNode(id);
@@ -241,6 +241,10 @@ void CanvasViewModel::splitSelectedLayoutCells(int rows, int columns)
     }
 
     layout->selectedCellIds.clear();
+    if (const LayoutNode* node = findLayoutNode(selected.last())) {
+        if (!node->children.isEmpty())
+            layout->selectedCellIds = { node->children.first().id };
+    }
     emit layoutChanged();
 }
 
@@ -324,7 +328,7 @@ void CanvasViewModel::resizeLayoutCells(const QString& firstCellId, const QStrin
 {
     LayoutNode* first = findLayoutNode(firstCellId.toInt());
     LayoutNode* second = findLayoutNode(secondCellId.toInt());
-    if (!first || !second || !first->isLeaf() || !second->isLeaf())
+    if (!first || !second)
         return;
 
     constexpr qreal MIN_CELL_RATIO = 0.05;
@@ -337,9 +341,8 @@ void CanvasViewModel::resizeLayoutCells(const QString& firstCellId, const QStrin
         if (total <= MIN_CELL_RATIO * 2.0) return;
         const qreal newFirstWidth = qBound(MIN_CELL_RATIO, first->width + deltaRatio, total - MIN_CELL_RATIO);
         const qreal newSecondWidth = total - newFirstWidth;
-        first->width = newFirstWidth;
-        second->x = first->x + first->width;
-        second->width = newSecondWidth;
+        setLayoutNodeRect(*first, first->x, first->y, newFirstWidth, first->height);
+        setLayoutNodeRect(*second, first->x + newFirstWidth, second->y, newSecondWidth, second->height);
     } else {
         const qreal sharedTop = first->y;
         const qreal sharedBottom = second->y + second->height;
@@ -347,81 +350,120 @@ void CanvasViewModel::resizeLayoutCells(const QString& firstCellId, const QStrin
         if (total <= MIN_CELL_RATIO * 2.0) return;
         const qreal newFirstHeight = qBound(MIN_CELL_RATIO, first->height + deltaRatio, total - MIN_CELL_RATIO);
         const qreal newSecondHeight = total - newFirstHeight;
-        first->height = newFirstHeight;
-        second->y = first->y + first->height;
-        second->height = newSecondHeight;
+        setLayoutNodeRect(*first, first->x, first->y, first->width, newFirstHeight);
+        setLayoutNodeRect(*second, second->x, first->y + newFirstHeight, second->width, newSecondHeight);
     }
 
-    updateWidgetGeometryFromLayoutCell(first->assignedWidgetId, *first);
-    updateWidgetGeometryFromLayoutCell(second->assignedWidgetId, *second);
+    clampWidgetsToLayoutBounds();
     emit layoutChanged();
 }
 
 void CanvasViewModel::mergeSelectedLayoutCells()
 {
     CanvasLayoutModel* layout = activeLayout();
-    if (!layout || layout->selectedCellIds.size() < 2)
+    if (!layout || layout->selectedCellIds.isEmpty())
         return;
 
-    LayoutNode* parent = findLayoutParent(layout->selectedCellIds.first());
-    if (!parent)
+    if (layout->selectedCellIds.size() >= 2) {
+        mergeLayoutSiblings(layout->selectedCellIds.at(0), layout->selectedCellIds.at(1));
+        return;
+    }
+
+    const int selectedId = layout->selectedCellIds.first();
+    const LayoutNode* parent = findLayoutParent(selectedId);
+    if (!parent || parent->children.size() != 2)
         return;
 
-    qreal left = 1.0;
-    qreal top = 1.0;
-    qreal right = 0.0;
-    qreal bottom = 0.0;
-    QList<int> selected = layout->selectedCellIds;
-    QHash<int, QRectF> oldRects;
-    for (int id : qAsConst(selected)) {
-        const LayoutNode* node = findLayoutNode(id);
-        if (!node || !node->isLeaf() || node->parentId != parent->id)
-            return;
-        oldRects.insert(id, QRectF(node->x, node->y, node->width, node->height));
-        left = qMin(left, node->x);
-        top = qMin(top, node->y);
-        right = qMax(right, node->x + node->width);
-        bottom = qMax(bottom, node->y + node->height);
-    }
+    const int siblingId = parent->children.at(0).id == selectedId
+            ? parent->children.at(1).id
+            : parent->children.at(0).id;
+    mergeLayoutSiblings(selectedId, siblingId);
+}
 
-    qreal selectedArea = 0.0;
-    for (int id : qAsConst(selected)) {
-        const LayoutNode* node = findLayoutNode(id);
-        selectedArea += node->width * node->height;
-    }
-    const qreal unionArea = (right - left) * (bottom - top);
+void CanvasViewModel::mergeLayoutSiblings(int firstCellId, int secondCellId)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout || firstCellId == secondCellId)
+        return;
+
+    LayoutNode* parent = findLayoutParent(firstCellId);
+    LayoutNode* secondParent = findLayoutParent(secondCellId);
+    if (!parent || parent != secondParent)
+        return;
+
+    LayoutNode* first = findLayoutNode(firstCellId);
+    LayoutNode* second = findLayoutNode(secondCellId);
+    if (!first || !second)
+        return;
+
+    const QRectF firstRect(first->x, first->y, first->width, first->height);
+    const QRectF secondRect(second->x, second->y, second->width, second->height);
+    const QRectF mergedRect = firstRect.united(secondRect);
+    const qreal selectedArea = firstRect.width() * firstRect.height() + secondRect.width() * secondRect.height();
+    const qreal unionArea = mergedRect.width() * mergedRect.height();
     if (qAbs(selectedArea - unionArea) > 0.0001)
         return;
 
-    LayoutNode merged;
-    merged.id = nextLayoutNodeId(*layout);
-    merged.parentId = parent->id;
-    merged.x = left;
-    merged.y = top;
-    merged.width = right - left;
-    merged.height = bottom - top;
-    merged.rowSpan = 1;
-    merged.columnSpan = 1;
+    QList<int> oldRegionIds;
+    QHash<int, QRectF> oldRects;
+    std::function<void(const LayoutNode&)> collectLeaves = [&](const LayoutNode& node) {
+        if (node.isLeaf()) {
+            oldRegionIds.append(node.id);
+            oldRects.insert(node.id, QRectF(node.x, node.y, node.width, node.height));
+            return;
+        }
+        for (const LayoutNode& child : node.children)
+            collectLeaves(child);
+    };
+    collectLeaves(*first);
+    collectLeaves(*second);
+
+    const bool collapseParent = parent->children.size() == 2
+            && qAbs(parent->x - mergedRect.x()) < 0.0001
+            && qAbs(parent->y - mergedRect.y()) < 0.0001
+            && qAbs(parent->width - mergedRect.width()) < 0.0001
+            && qAbs(parent->height - mergedRect.height()) < 0.0001;
+
+    int targetRegionId = parent->id;
+    QRectF targetRect(parent->x, parent->y, parent->width, parent->height);
 
     for (int i = parent->children.size() - 1; i >= 0; --i) {
-        if (selected.contains(parent->children.at(i).id))
+        const int childId = parent->children.at(i).id;
+        if (childId == firstCellId || childId == secondCellId)
             parent->children.removeAt(i);
     }
-    parent->children.append(merged);
-    layout->selectedCellIds = { merged.id };
+
+    if (collapseParent) {
+        parent->children.clear();
+    } else {
+        LayoutNode merged;
+        merged.id = nextLayoutNodeId(*layout);
+        merged.parentId = parent->id;
+        merged.x = mergedRect.x();
+        merged.y = mergedRect.y();
+        merged.width = mergedRect.width();
+        merged.height = mergedRect.height();
+        merged.rowSpan = 1;
+        merged.columnSpan = 1;
+        parent->children.append(merged);
+        targetRegionId = merged.id;
+        targetRect = mergedRect;
+    }
+
+    layout->selectedCellIds = { targetRegionId };
 
     for (int i = 0; i < m_widgets.size(); ++i) {
         WidgetItem& widget = m_widgets[i];
-        if (!selected.contains(widget.parentRegionId))
+        if (!oldRegionIds.contains(widget.parentRegionId))
             continue;
         const QRectF oldRect = oldRects.value(widget.parentRegionId);
-        widget.x += (oldRect.x() - merged.x) * 1280.0;
-        widget.y += (oldRect.y() - merged.y) * 720.0;
-        widget.parentRegionId = merged.id;
+        widget.x += (oldRect.x() - targetRect.x()) * 1280.0;
+        widget.y += (oldRect.y() - targetRect.y()) * 720.0;
+        widget.parentRegionId = targetRegionId;
         emit dataChanged(index(i, 0), index(i, 0), { ParentRegionIdRole, XRole, YRole });
     }
+    clampWidgetsToLayoutBounds();
     syncScreenFromWidgets();
-    emitAllWidgetDataChanged();
     emit layoutChanged();
 }
 
@@ -1194,62 +1236,68 @@ QVariantList CanvasViewModel::layoutCells() const
 QVariantList CanvasViewModel::layoutResizeHandles() const
 {
     QVariantList handles;
-    const QVariantList cells = layoutCells();
+    const CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return handles;
+
     constexpr qreal EPSILON = 0.0001;
 
-    for (int i = 0; i < cells.size(); ++i) {
-        const QVariantMap a = cells.at(i).toMap();
-        const qreal ax = a.value("x").toReal();
-        const qreal ay = a.value("y").toReal();
-        const qreal aw = a.value("width").toReal();
-        const qreal ah = a.value("height").toReal();
-        for (int j = i + 1; j < cells.size(); ++j) {
-            const QVariantMap b = cells.at(j).toMap();
-            const qreal bx = b.value("x").toReal();
-            const qreal by = b.value("y").toReal();
-            const qreal bw = b.value("width").toReal();
-            const qreal bh = b.value("height").toReal();
+    std::function<void(const LayoutNode&)> appendSiblingHandles = [&](const LayoutNode& parent) {
+        for (int i = 0; i < parent.children.size(); ++i) {
+            const LayoutNode& a = parent.children.at(i);
+            for (int j = i + 1; j < parent.children.size(); ++j) {
+                const LayoutNode& b = parent.children.at(j);
+                const qreal verticalOverlap = qMin(a.y + a.height, b.y + b.height) - qMax(a.y, b.y);
+                if (qAbs((a.x + a.width) - b.x) < EPSILON && verticalOverlap > EPSILON) {
+                    QVariantMap handle;
+                    handle.insert("firstCellId", a.id);
+                    handle.insert("secondCellId", b.id);
+                    handle.insert("orientation", "vertical");
+                    handle.insert("x", b.x);
+                    handle.insert("y", qMax(a.y, b.y) + verticalOverlap / 2.0);
+                    handle.insert("start", qMax(a.y, b.y));
+                    handle.insert("length", verticalOverlap);
+                    handles.append(handle);
+                } else if (qAbs((b.x + b.width) - a.x) < EPSILON && verticalOverlap > EPSILON) {
+                    QVariantMap handle;
+                    handle.insert("firstCellId", b.id);
+                    handle.insert("secondCellId", a.id);
+                    handle.insert("orientation", "vertical");
+                    handle.insert("x", a.x);
+                    handle.insert("y", qMax(a.y, b.y) + verticalOverlap / 2.0);
+                    handle.insert("start", qMax(a.y, b.y));
+                    handle.insert("length", verticalOverlap);
+                    handles.append(handle);
+                }
 
-            const qreal verticalOverlap = qMin(ay + ah, by + bh) - qMax(ay, by);
-            if (qAbs((ax + aw) - bx) < EPSILON && verticalOverlap > EPSILON) {
-                QVariantMap handle;
-                handle.insert("firstCellId", a.value("id"));
-                handle.insert("secondCellId", b.value("id"));
-                handle.insert("orientation", "vertical");
-                handle.insert("x", bx);
-                handle.insert("y", qMax(ay, by) + verticalOverlap / 2.0);
-                handles.append(handle);
-            } else if (qAbs((bx + bw) - ax) < EPSILON && verticalOverlap > EPSILON) {
-                QVariantMap handle;
-                handle.insert("firstCellId", b.value("id"));
-                handle.insert("secondCellId", a.value("id"));
-                handle.insert("orientation", "vertical");
-                handle.insert("x", ax);
-                handle.insert("y", qMax(ay, by) + verticalOverlap / 2.0);
-                handles.append(handle);
+                const qreal horizontalOverlap = qMin(a.x + a.width, b.x + b.width) - qMax(a.x, b.x);
+                if (qAbs((a.y + a.height) - b.y) < EPSILON && horizontalOverlap > EPSILON) {
+                    QVariantMap handle;
+                    handle.insert("firstCellId", a.id);
+                    handle.insert("secondCellId", b.id);
+                    handle.insert("orientation", "horizontal");
+                    handle.insert("x", qMax(a.x, b.x) + horizontalOverlap / 2.0);
+                    handle.insert("y", b.y);
+                    handle.insert("start", qMax(a.x, b.x));
+                    handle.insert("length", horizontalOverlap);
+                    handles.append(handle);
+                } else if (qAbs((b.y + b.height) - a.y) < EPSILON && horizontalOverlap > EPSILON) {
+                    QVariantMap handle;
+                    handle.insert("firstCellId", b.id);
+                    handle.insert("secondCellId", a.id);
+                    handle.insert("orientation", "horizontal");
+                    handle.insert("x", qMax(a.x, b.x) + horizontalOverlap / 2.0);
+                    handle.insert("y", a.y);
+                    handle.insert("start", qMax(a.x, b.x));
+                    handle.insert("length", horizontalOverlap);
+                    handles.append(handle);
+                }
             }
-
-            const qreal horizontalOverlap = qMin(ax + aw, bx + bw) - qMax(ax, bx);
-            if (qAbs((ay + ah) - by) < EPSILON && horizontalOverlap > EPSILON) {
-                QVariantMap handle;
-                handle.insert("firstCellId", a.value("id"));
-                handle.insert("secondCellId", b.value("id"));
-                handle.insert("orientation", "horizontal");
-                handle.insert("x", qMax(ax, bx) + horizontalOverlap / 2.0);
-                handle.insert("y", by);
-                handles.append(handle);
-            } else if (qAbs((by + bh) - ay) < EPSILON && horizontalOverlap > EPSILON) {
-                QVariantMap handle;
-                handle.insert("firstCellId", b.value("id"));
-                handle.insert("secondCellId", a.value("id"));
-                handle.insert("orientation", "horizontal");
-                handle.insert("x", qMax(ax, bx) + horizontalOverlap / 2.0);
-                handle.insert("y", ay);
-                handles.append(handle);
-            }
+            appendSiblingHandles(a);
         }
-    }
+    };
 
+    appendSiblingHandles(layout->root);
     return handles;
 }
 
@@ -1485,6 +1533,32 @@ void CanvasViewModel::splitLayoutNode(LayoutNode& node, int rows, int columns)
     }
 }
 
+void CanvasViewModel::setLayoutNodeRect(LayoutNode& node, qreal x, qreal y, qreal width, qreal height)
+{
+    const QRectF oldRect(node.x, node.y, node.width, node.height);
+    const QRectF newRect(x, y, width, height);
+
+    node.x = newRect.x();
+    node.y = newRect.y();
+    node.width = newRect.width();
+    node.height = newRect.height();
+
+    if (node.children.isEmpty() || oldRect.width() <= 0.0 || oldRect.height() <= 0.0)
+        return;
+
+    for (LayoutNode& child : node.children) {
+        const qreal relativeX = (child.x - oldRect.x()) / oldRect.width();
+        const qreal relativeY = (child.y - oldRect.y()) / oldRect.height();
+        const qreal relativeWidth = child.width / oldRect.width();
+        const qreal relativeHeight = child.height / oldRect.height();
+        setLayoutNodeRect(child,
+                          newRect.x() + relativeX * newRect.width(),
+                          newRect.y() + relativeY * newRect.height(),
+                          relativeWidth * newRect.width(),
+                          relativeHeight * newRect.height());
+    }
+}
+
 void CanvasViewModel::setLayoutTemplate(CanvasLayoutModel& layout, int tmpl)
 {
     layout.basicLayout = CanvasLayoutModel::Custom;
@@ -1620,6 +1694,26 @@ void CanvasViewModel::updateWidgetGeometryFromLayoutCell(int widgetId, const Lay
         m_screen.canvas.widgets[row].geometry = QRectF(widget.x, widget.y, widget.width, widget.height);
 
     emit dataChanged(index(row, 0), index(row, 0), { XRole, YRole, WidthRole, HeightRole });
+}
+
+void CanvasViewModel::clampWidgetsToLayoutBounds()
+{
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        WidgetItem& widget = m_widgets[i];
+        const LayoutNode* region = findLayoutNode(widget.parentRegionId);
+        if (!region)
+            continue;
+
+        const qreal regionWidth = region->width * 1280.0;
+        const qreal regionHeight = region->height * 720.0;
+        widget.width = qMin(widget.width, qMax<qreal>(24.0, regionWidth));
+        widget.height = qMin(widget.height, qMax<qreal>(24.0, regionHeight));
+        widget.x = qBound<qreal>(0.0, widget.x, qMax<qreal>(0.0, regionWidth - widget.width));
+        widget.y = qBound<qreal>(0.0, widget.y, qMax<qreal>(0.0, regionHeight - widget.height));
+        emit dataChanged(index(i, 0), index(i, 0),
+                         { ParentRegionIdRole, XRole, YRole, WidthRole, HeightRole });
+    }
+    syncScreenFromWidgets();
 }
 
 int CanvasViewModel::defaultLeafRegionId() const

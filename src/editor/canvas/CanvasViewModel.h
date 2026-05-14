@@ -120,6 +120,7 @@ public:
     Q_INVOKABLE void addWidgetToLayoutCell(const QString& type, int cellId);
     Q_INVOKABLE void addWidgetToLayoutCellAt(const QString& type, int cellId, qreal x, qreal y);
     Q_INVOKABLE void mergeSelectedLayoutCells();
+    Q_INVOKABLE void mergeLayoutSiblings(int firstCellId, int secondCellId);
     Q_INVOKABLE void unmergeSelectedLayoutCell();
     Q_INVOKABLE void resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
                                        const QString& orientation, qreal deltaRatio);
@@ -192,10 +193,12 @@ private:
     eversight::LayoutNode* findLayoutParent(int childId);
     const eversight::LayoutNode* findLayoutParent(int childId) const;
     void splitLayoutNode(eversight::LayoutNode& node, int rows, int columns);
+    void setLayoutNodeRect(eversight::LayoutNode& node, qreal x, qreal y, qreal width, qreal height);
     void setLayoutTemplate(eversight::CanvasLayoutModel& layout, int tmpl);
     int nextLayoutNodeId(eversight::CanvasLayoutModel& layout);
     void assignWidgetToLayoutCell(int widgetId, int cellId);
     void updateWidgetGeometryFromLayoutCell(int widgetId, const eversight::LayoutNode& cell);
+    void clampWidgetsToLayoutBounds();
     int defaultLeafRegionId() const;
     void reassignWidgetsToRegion(const QList<int>& oldRegionIds, int newRegionId);
 
