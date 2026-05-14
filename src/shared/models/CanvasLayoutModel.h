@@ -9,6 +9,7 @@ namespace eversight {
 struct LayoutNode
 {
     int id = 1;
+    int parentId = -1;
     int row = 0;
     int column = 0;
     int rowSpan = 1;

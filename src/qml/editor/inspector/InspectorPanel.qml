@@ -65,13 +65,16 @@ Rectangle {
         }
 
         ScrollView {
+            id: inspectorScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            contentWidth: availableWidth
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
             ColumnLayout {
-                width: root.width
-                anchors.margins: 15
+                width: inspectorScroll.availableWidth
                 spacing: 10
 
                 Rectangle {
@@ -152,6 +155,7 @@ Rectangle {
                             to: 10
                             value: canvasViewModel.currentCustomRows
                             editable: true
+                            Layout.fillWidth: true
                         }
 
                         Label { text: "x"; color: "#555b62" }
@@ -162,6 +166,7 @@ Rectangle {
                             to: 10
                             value: canvasViewModel.currentCustomColumns
                             editable: true
+                            Layout.fillWidth: true
                         }
 
                         Button {
@@ -187,6 +192,8 @@ Rectangle {
                             model: 7
 
                             delegate: Button {
+                                required property int index
+
                                 Layout.fillWidth: true
                                 text: "Template" + (index + 1)
                                 checkable: true
@@ -203,9 +210,24 @@ Rectangle {
                         Button {
                             Layout.fillWidth: true
                             enabled: canvasViewModel.hasSelectedLayoutCell
-                            text: "Split Selected 2x2"
-                            onClicked: canvasViewModel.splitSelectedLayoutCells(2, 2)
+                            text: "Split H"
+                            onClicked: canvasViewModel.splitSelectedRegionHorizontal()
                         }
+
+                        Button {
+                            Layout.fillWidth: true
+                            enabled: canvasViewModel.hasSelectedLayoutCell
+                            text: "Split V"
+                            onClicked: canvasViewModel.splitSelectedRegionVertical()
+                        }
+
+                        Button {
+                            Layout.fillWidth: true
+                            enabled: canvasViewModel.hasSelectedLayoutCell
+                            text: "Merge"
+                            onClicked: canvasViewModel.mergeSelectedLayoutCells()
+                        }
+
                     }
 
                     Divider {

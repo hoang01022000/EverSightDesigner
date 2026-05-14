@@ -19,6 +19,7 @@ static QJsonObject layoutNodeToJson(const LayoutNode& node)
 {
     QJsonObject obj;
     obj["id"] = node.id;
+    obj["parentId"] = node.parentId;
     obj["row"] = node.row;
     obj["column"] = node.column;
     obj["rowSpan"] = node.rowSpan;
@@ -40,6 +41,7 @@ static LayoutNode layoutNodeFromJson(const QJsonObject& obj)
 {
     LayoutNode node;
     node.id = obj["id"].toInt(1);
+    node.parentId = obj["parentId"].toInt(-1);
     node.row = obj["row"].toInt();
     node.column = obj["column"].toInt();
     node.rowSpan = obj["rowSpan"].toInt(1);
@@ -95,7 +97,6 @@ CanvasViewModel::CanvasViewModel(QObject* parent)
     tab.id = 1;
     tab.title = QStringLiteral("Tab 1");
     m_tabs.append(tab);
-    splitLayoutNode(m_tabs[0].layout.root, 1, 1);
 }
 
 // Tab and fixed-bar implementations
@@ -104,9 +105,6 @@ void CanvasViewModel::addTab()
     CanvasTabModel t;
     t.id = m_tabs.size() + 1;
     t.title = QString("Tab %1").arg(t.id);
-    LayoutNode child;
-    child.id = t.layout.nextNodeId++;
-    t.layout.root.children.append(child);
     beginResetModel();
     m_tabs.append(t);
     endResetModel();
@@ -233,14 +231,27 @@ void CanvasViewModel::splitSelectedLayoutCells(int rows, int columns)
 
     for (int id : qAsConst(selected)) {
         LayoutNode* node = findLayoutNode(id);
-        if (!node)
+        if (!node || !node->isLeaf())
             continue;
+        const QList<int> oldRegionIds{ id };
         node->assignedWidgetId = -1;
         splitLayoutNode(*node, rows, columns);
+        if (!node->children.isEmpty())
+            reassignWidgetsToRegion(oldRegionIds, node->children.first().id);
     }
 
     layout->selectedCellIds.clear();
     emit layoutChanged();
+}
+
+void CanvasViewModel::splitSelectedRegionHorizontal()
+{
+    splitSelectedLayoutCells(2, 1);
+}
+
+void CanvasViewModel::splitSelectedRegionVertical()
+{
+    splitSelectedLayoutCells(1, 2);
 }
 
 void CanvasViewModel::selectLayoutCell(int cellId, bool additive)
@@ -281,6 +292,11 @@ void CanvasViewModel::assignSelectedWidgetToLayoutCell(int cellId)
 
 void CanvasViewModel::addWidgetToLayoutCell(const QString& type, int cellId)
 {
+    addWidgetToLayoutCellAt(type, cellId, 12.0, 12.0);
+}
+
+void CanvasViewModel::addWidgetToLayoutCellAt(const QString& type, int cellId, qreal x, qreal y)
+{
     const LayoutNode* cell = findLayoutNode(cellId);
     if (!cell || !cell->isLeaf())
         return;
@@ -289,12 +305,11 @@ void CanvasViewModel::addWidgetToLayoutCell(const QString& type, int cellId)
     beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
     WidgetItem item = createWidget(type);
     item.id = m_nextId++;
-    const qreal canvasWidth = 1280.0;
-    const qreal canvasHeight = 720.0;
-    item.x = cell->x * canvasWidth;
-    item.y = cell->y * canvasHeight;
-    item.width = qMax<qreal>(24.0, cell->width * canvasWidth);
-    item.height = qMax<qreal>(24.0, cell->height * canvasHeight);
+    item.parentRegionId = cellId;
+    item.width = qMin(item.width, qMax<qreal>(24.0, cell->width * 1280.0 - 24.0));
+    item.height = qMin(item.height, qMax<qreal>(24.0, cell->height * 720.0 - 24.0));
+    item.x = qBound<qreal>(0.0, x, qMax<qreal>(0.0, cell->width * 1280.0 - item.width));
+    item.y = qBound<qreal>(0.0, y, qMax<qreal>(0.0, cell->height * 720.0 - item.height));
     m_widgets.append(item);
     m_screen.canvas.widgets.append(eversight::toWidgetModel(item));
     endInsertRows();
@@ -340,6 +355,83 @@ void CanvasViewModel::resizeLayoutCells(const QString& firstCellId, const QStrin
     updateWidgetGeometryFromLayoutCell(first->assignedWidgetId, *first);
     updateWidgetGeometryFromLayoutCell(second->assignedWidgetId, *second);
     emit layoutChanged();
+}
+
+void CanvasViewModel::mergeSelectedLayoutCells()
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout || layout->selectedCellIds.size() < 2)
+        return;
+
+    LayoutNode* parent = findLayoutParent(layout->selectedCellIds.first());
+    if (!parent)
+        return;
+
+    qreal left = 1.0;
+    qreal top = 1.0;
+    qreal right = 0.0;
+    qreal bottom = 0.0;
+    QList<int> selected = layout->selectedCellIds;
+    QHash<int, QRectF> oldRects;
+    for (int id : qAsConst(selected)) {
+        const LayoutNode* node = findLayoutNode(id);
+        if (!node || !node->isLeaf() || node->parentId != parent->id)
+            return;
+        oldRects.insert(id, QRectF(node->x, node->y, node->width, node->height));
+        left = qMin(left, node->x);
+        top = qMin(top, node->y);
+        right = qMax(right, node->x + node->width);
+        bottom = qMax(bottom, node->y + node->height);
+    }
+
+    qreal selectedArea = 0.0;
+    for (int id : qAsConst(selected)) {
+        const LayoutNode* node = findLayoutNode(id);
+        selectedArea += node->width * node->height;
+    }
+    const qreal unionArea = (right - left) * (bottom - top);
+    if (qAbs(selectedArea - unionArea) > 0.0001)
+        return;
+
+    LayoutNode merged;
+    merged.id = nextLayoutNodeId(*layout);
+    merged.parentId = parent->id;
+    merged.x = left;
+    merged.y = top;
+    merged.width = right - left;
+    merged.height = bottom - top;
+    merged.rowSpan = 1;
+    merged.columnSpan = 1;
+
+    for (int i = parent->children.size() - 1; i >= 0; --i) {
+        if (selected.contains(parent->children.at(i).id))
+            parent->children.removeAt(i);
+    }
+    parent->children.append(merged);
+    layout->selectedCellIds = { merged.id };
+
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        WidgetItem& widget = m_widgets[i];
+        if (!selected.contains(widget.parentRegionId))
+            continue;
+        const QRectF oldRect = oldRects.value(widget.parentRegionId);
+        widget.x += (oldRect.x() - merged.x) * 1280.0;
+        widget.y += (oldRect.y() - merged.y) * 720.0;
+        widget.parentRegionId = merged.id;
+        emit dataChanged(index(i, 0), index(i, 0), { ParentRegionIdRole, XRole, YRole });
+    }
+    syncScreenFromWidgets();
+    emitAllWidgetDataChanged();
+    emit layoutChanged();
+}
+
+void CanvasViewModel::unmergeSelectedLayoutCell()
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout || layout->selectedCellIds.isEmpty())
+        return;
+
+    setBasicLayout(int(CanvasLayoutModel::L4));
 }
 
 int CanvasViewModel::currentBasicLayout() const
@@ -397,6 +489,7 @@ QVariant CanvasViewModel::data(const QModelIndex& index, int role) const
 
     switch (role) {
     case IdRole:          return w.id;
+    case ParentRegionIdRole: return w.parentRegionId;
     case TypeRole:        return w.type;
     case XRole:           return w.x;
     case YRole:           return w.y;
@@ -422,6 +515,7 @@ QHash<int, QByteArray> CanvasViewModel::roleNames() const
 {
     return {
         { IdRole,          "widgetId"          },
+        { ParentRegionIdRole, "widgetParentRegionId" },
         { TypeRole,        "widgetType"        },
         { XRole,           "widgetX"           },
         { YRole,           "widgetY"           },
@@ -469,8 +563,13 @@ WidgetItem CanvasViewModel::createWidget(const QString& type) const
 
 void CanvasViewModel::addWidget(const QString& type)
 {
-    addWidgetAt(type, 160.0 + (m_widgets.size() % 6) * 24,
-                      120.0 + (m_widgets.size() % 6) * 24);
+    const int regionId = selectedLayoutCellId() >= 0 ? selectedLayoutCellId() : defaultLeafRegionId();
+    const LayoutNode* region = findLayoutNode(regionId);
+    const qreal maxX = region ? qMax<qreal>(0.0, region->width * 1280.0 - 180.0) : 1024.0;
+    const qreal maxY = region ? qMax<qreal>(0.0, region->height * 720.0 - 120.0) : 560.0;
+    addWidgetAt(type,
+                qMin(160.0 + (m_widgets.size() % 6) * 24, maxX),
+                qMin(120.0 + (m_widgets.size() % 6) * 24, maxY));
 }
 
 void CanvasViewModel::addWidgetAt(const QString& type, qreal x, qreal y)
@@ -479,8 +578,13 @@ void CanvasViewModel::addWidgetAt(const QString& type, qreal x, qreal y)
     beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
     WidgetItem item = createWidget(type);
     item.id = m_nextId++;
+    item.parentRegionId = selectedLayoutCellId() >= 0 ? selectedLayoutCellId() : defaultLeafRegionId();
     item.x  = x;
     item.y  = y;
+    if (const LayoutNode* region = findLayoutNode(item.parentRegionId)) {
+        item.x = qBound<qreal>(0.0, item.x, qMax<qreal>(0.0, region->width * 1280.0 - item.width));
+        item.y = qBound<qreal>(0.0, item.y, qMax<qreal>(0.0, region->height * 720.0 - item.height));
+    }
     m_widgets.append(item);
     // Keep shadow screen model in sync (canvas zone)
     m_screen.canvas.widgets.append(eversight::toWidgetModel(item));
@@ -773,6 +877,13 @@ void CanvasViewModel::updateWidgetGeometry(int id, qreal x, qreal y, qreal width
     const int row = indexOfWidget(id);
     if (row < 0) return;
     WidgetItem& w = m_widgets[row];
+    const LayoutNode* region = findLayoutNode(w.parentRegionId);
+    const qreal regionWidth = region ? region->width * 1280.0 : 1280.0;
+    const qreal regionHeight = region ? region->height * 720.0 : 720.0;
+    width = qBound<qreal>(24.0, width, qMax<qreal>(24.0, regionWidth));
+    height = qBound<qreal>(24.0, height, qMax<qreal>(24.0, regionHeight));
+    x = qBound<qreal>(0.0, x, qMax<qreal>(0.0, regionWidth - width));
+    y = qBound<qreal>(0.0, y, qMax<qreal>(0.0, regionHeight - height));
     if (qFuzzyCompare(w.x, x) && qFuzzyCompare(w.y, y)
             && qFuzzyCompare(w.width, width) && qFuzzyCompare(w.height, height))
         return;
@@ -928,6 +1039,7 @@ bool CanvasViewModel::saveToFile(const QString& filePath) const
     for (const WidgetItem& w : m_widgets) {
         QJsonObject obj;
         obj["id"]          = w.id;
+        obj["parentRegionId"] = w.parentRegionId;
         obj["type"]        = w.type;
         obj["title"]       = w.title;
         obj["x"]           = w.x;
@@ -969,6 +1081,7 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
         const QJsonObject obj = val.toObject();
         WidgetItem w;
         w.id          = obj["id"].toInt();
+        w.parentRegionId = obj["parentRegionId"].toInt(defaultLeafRegionId());
         w.type        = obj["type"].toString();
         w.title       = obj["title"].toString(w.type);
         w.x           = obj["x"].toDouble();
@@ -1225,7 +1338,7 @@ void CanvasViewModel::emitAllWidgetDataChanged()
         return;
 
     emit dataChanged(index(0, 0), index(m_widgets.size() - 1, 0),
-                     { XRole, YRole, WidthRole, HeightRole, SelectedRole });
+                     { ParentRegionIdRole, XRole, YRole, WidthRole, HeightRole, SelectedRole });
 }
 
 void CanvasViewModel::setSelection(const QList<int>& ids, int primaryId)
@@ -1306,6 +1419,44 @@ const LayoutNode* CanvasViewModel::findLayoutNode(int id) const
     return find(layout->root);
 }
 
+LayoutNode* CanvasViewModel::findLayoutParent(int childId)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return nullptr;
+
+    std::function<LayoutNode*(LayoutNode&)> find = [&](LayoutNode& node) -> LayoutNode* {
+        for (LayoutNode& child : node.children) {
+            if (child.id == childId)
+                return &node;
+            if (LayoutNode* found = find(child))
+                return found;
+        }
+        return nullptr;
+    };
+
+    return find(layout->root);
+}
+
+const LayoutNode* CanvasViewModel::findLayoutParent(int childId) const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return nullptr;
+
+    std::function<const LayoutNode*(const LayoutNode&)> find = [&](const LayoutNode& node) -> const LayoutNode* {
+        for (const LayoutNode& child : node.children) {
+            if (child.id == childId)
+                return &node;
+            if (const LayoutNode* found = find(child))
+                return found;
+        }
+        return nullptr;
+    };
+
+    return find(layout->root);
+}
+
 void CanvasViewModel::splitLayoutNode(LayoutNode& node, int rows, int columns)
 {
     CanvasLayoutModel* layout = activeLayout();
@@ -1313,10 +1464,14 @@ void CanvasViewModel::splitLayoutNode(LayoutNode& node, int rows, int columns)
     columns = qBound(1, columns, 10);
     node.children.clear();
 
+    if (rows == 1 && columns == 1)
+        return;
+
     for (int row = 0; row < rows; ++row) {
         for (int column = 0; column < columns; ++column) {
             LayoutNode child;
             child.id = layout ? nextLayoutNodeId(*layout) : (row * columns + column + 2);
+            child.parentId = node.id;
             child.row = row;
             child.column = column;
             child.rowSpan = 1;
@@ -1342,6 +1497,7 @@ void CanvasViewModel::setLayoutTemplate(CanvasLayoutModel& layout, int tmpl)
     auto addCell = [&](int row, int column, int rowSpan, int columnSpan, int gridRows, int gridColumns) {
         LayoutNode child;
         child.id = nextLayoutNodeId(layout);
+        child.parentId = layout.root.id;
         child.row = row;
         child.column = column;
         child.rowSpan = rowSpan;
@@ -1432,7 +1588,17 @@ void CanvasViewModel::assignWidgetToLayoutCell(int widgetId, int cellId)
     clearExisting(layout->root);
 
     cell->assignedWidgetId = widgetId;
-    updateWidgetGeometryFromLayoutCell(widgetId, *cell);
+    const int row = indexOfWidget(widgetId);
+    if (row >= 0) {
+        WidgetItem& widget = m_widgets[row];
+        widget.parentRegionId = cellId;
+        widget.x = qBound<qreal>(0.0, widget.x, qMax<qreal>(0.0, cell->width * 1280.0 - widget.width));
+        widget.y = qBound<qreal>(0.0, widget.y, qMax<qreal>(0.0, cell->height * 720.0 - widget.height));
+        widget.width = qMin(widget.width, qMax<qreal>(24.0, cell->width * 1280.0));
+        widget.height = qMin(widget.height, qMax<qreal>(24.0, cell->height * 720.0));
+        emit dataChanged(index(row, 0), index(row, 0),
+                         { ParentRegionIdRole, XRole, YRole, WidthRole, HeightRole });
+    }
     emit layoutChanged();
 }
 
@@ -1443,13 +1609,66 @@ void CanvasViewModel::updateWidgetGeometryFromLayoutCell(int widgetId, const Lay
         return;
 
     WidgetItem& widget = m_widgets[row];
-    widget.x = cell.x * 1280.0;
-    widget.y = cell.y * 720.0;
-    widget.width = qMax<qreal>(24.0, cell.width * 1280.0);
-    widget.height = qMax<qreal>(24.0, cell.height * 720.0);
+    const qreal regionWidth = cell.width * 1280.0;
+    const qreal regionHeight = cell.height * 720.0;
+    widget.width = qMin(widget.width, qMax<qreal>(24.0, regionWidth));
+    widget.height = qMin(widget.height, qMax<qreal>(24.0, regionHeight));
+    widget.x = qBound<qreal>(0.0, widget.x, qMax<qreal>(0.0, regionWidth - widget.width));
+    widget.y = qBound<qreal>(0.0, widget.y, qMax<qreal>(0.0, regionHeight - widget.height));
 
     if (row >= 0 && row < m_screen.canvas.widgets.size())
         m_screen.canvas.widgets[row].geometry = QRectF(widget.x, widget.y, widget.width, widget.height);
 
     emit dataChanged(index(row, 0), index(row, 0), { XRole, YRole, WidthRole, HeightRole });
+}
+
+int CanvasViewModel::defaultLeafRegionId() const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return 1;
+
+    std::function<int(const LayoutNode&)> findLeaf = [&](const LayoutNode& node) -> int {
+        if (node.isLeaf())
+            return node.id;
+        for (const LayoutNode& child : node.children) {
+            const int id = findLeaf(child);
+            if (id >= 0)
+                return id;
+        }
+        return -1;
+    };
+
+    const int id = findLeaf(layout->root);
+    return id >= 0 ? id : layout->root.id;
+}
+
+void CanvasViewModel::reassignWidgetsToRegion(const QList<int>& oldRegionIds, int newRegionId)
+{
+    const LayoutNode* target = findLayoutNode(newRegionId);
+    if (!target)
+        return;
+
+    const qreal regionWidth = target->width * 1280.0;
+    const qreal regionHeight = target->height * 720.0;
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        WidgetItem& widget = m_widgets[i];
+        if (!oldRegionIds.contains(widget.parentRegionId))
+            continue;
+
+        const LayoutNode* oldRegion = findLayoutNode(widget.parentRegionId);
+        if (oldRegion) {
+            widget.x += (oldRegion->x - target->x) * 1280.0;
+            widget.y += (oldRegion->y - target->y) * 720.0;
+        }
+
+        widget.parentRegionId = newRegionId;
+        widget.width = qMin(widget.width, qMax<qreal>(24.0, regionWidth));
+        widget.height = qMin(widget.height, qMax<qreal>(24.0, regionHeight));
+        widget.x = qBound<qreal>(0.0, widget.x, qMax<qreal>(0.0, regionWidth - widget.width));
+        widget.y = qBound<qreal>(0.0, widget.y, qMax<qreal>(0.0, regionHeight - widget.height));
+        emit dataChanged(index(i, 0), index(i, 0),
+                         { ParentRegionIdRole, XRole, YRole, WidthRole, HeightRole });
+    }
+    syncScreenFromWidgets();
 }

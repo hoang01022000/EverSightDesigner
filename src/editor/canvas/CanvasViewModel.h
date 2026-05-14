@@ -54,7 +54,7 @@ public:
 
     enum Roles {
         IdRole = Qt::UserRole + 1,
-        TypeRole, XRole, YRole, WidthRole, HeightRole,
+        ParentRegionIdRole, TypeRole, XRole, YRole, WidthRole, HeightRole,
         TitleRole, SelectedRole, ComponentSourceRole, DataSourceRole, ControlTypeRole,
         ButtonColorRole, BorderColorRole, IconColorRole, AutoFillRole
     };
@@ -112,10 +112,15 @@ public:
     Q_INVOKABLE void setSplitTemplate(int tmpl);
     Q_INVOKABLE void setCustomLayout(int rows, int columns);
     Q_INVOKABLE void splitSelectedLayoutCells(int rows, int columns);
+    Q_INVOKABLE void splitSelectedRegionHorizontal();
+    Q_INVOKABLE void splitSelectedRegionVertical();
     Q_INVOKABLE void selectLayoutCell(int cellId, bool additive = false);
     Q_INVOKABLE void clearLayoutCellSelection();
     Q_INVOKABLE void assignSelectedWidgetToLayoutCell(int cellId);
     Q_INVOKABLE void addWidgetToLayoutCell(const QString& type, int cellId);
+    Q_INVOKABLE void addWidgetToLayoutCellAt(const QString& type, int cellId, qreal x, qreal y);
+    Q_INVOKABLE void mergeSelectedLayoutCells();
+    Q_INVOKABLE void unmergeSelectedLayoutCell();
     Q_INVOKABLE void resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
                                        const QString& orientation, qreal deltaRatio);
     Q_INVOKABLE int  currentBasicLayout() const;
@@ -184,11 +189,15 @@ private:
     const eversight::CanvasLayoutModel* activeLayout() const;
     eversight::LayoutNode* findLayoutNode(int id);
     const eversight::LayoutNode* findLayoutNode(int id) const;
+    eversight::LayoutNode* findLayoutParent(int childId);
+    const eversight::LayoutNode* findLayoutParent(int childId) const;
     void splitLayoutNode(eversight::LayoutNode& node, int rows, int columns);
     void setLayoutTemplate(eversight::CanvasLayoutModel& layout, int tmpl);
     int nextLayoutNodeId(eversight::CanvasLayoutModel& layout);
     void assignWidgetToLayoutCell(int widgetId, int cellId);
     void updateWidgetGeometryFromLayoutCell(int widgetId, const eversight::LayoutNode& cell);
+    int defaultLeafRegionId() const;
+    void reassignWidgetsToRegion(const QList<int>& oldRegionIds, int newRegionId);
 
     QList<WidgetItem> m_widgets;
     int               m_nextId           = 1;

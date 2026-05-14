@@ -12,6 +12,10 @@ Item {
     property string iconColor: "#f6f6f6"
     property string componentSource: "widgets/PlaceholderWidget.qml"
     property bool selected: false
+    property real boundsWidth: 1280
+    property real boundsHeight: 720
+    property bool showVerticalGuide: false
+    property bool showHorizontalGuide: false
 
     signal selectedRequested(int id, bool additive)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
@@ -57,10 +61,50 @@ Item {
             root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
         }
 
+        onPositionChanged: {
+            const snapThreshold = 6
+            const centerX = root.x + root.width / 2
+            const centerY = root.y + root.height / 2
+            root.showVerticalGuide = Math.abs(centerX - root.boundsWidth / 2) <= snapThreshold
+            root.showHorizontalGuide = Math.abs(centerY - root.boundsHeight / 2) <= snapThreshold
+            if (root.showVerticalGuide)
+                root.x = root.boundsWidth / 2 - root.width / 2
+            if (root.showHorizontalGuide)
+                root.y = root.boundsHeight / 2 - root.height / 2
+            root.x = Math.max(0, Math.min(root.x, root.boundsWidth - root.width))
+            root.y = Math.max(0, Math.min(root.y, root.boundsHeight - root.height))
+        }
+
         onReleased: {
             root.z = 1
+            root.x = Math.max(0, Math.min(root.x, root.boundsWidth - root.width))
+            root.y = Math.max(0, Math.min(root.y, root.boundsHeight - root.height))
+            root.showVerticalGuide = false
+            root.showHorizontalGuide = false
             root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
         }
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: root.boundsWidth / 2 - width / 2
+        y: 0
+        width: 1
+        height: root.boundsHeight
+        color: "#39a7ff"
+        visible: root.showVerticalGuide
+        z: 4000
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: 0
+        y: root.boundsHeight / 2 - height / 2
+        width: root.boundsWidth
+        height: 1
+        color: "#39a7ff"
+        visible: root.showHorizontalGuide
+        z: 4000
     }
 
     component ResizeHandle: Rectangle {
@@ -124,6 +168,10 @@ Item {
                 if (handlePos >= 2 && handlePos <= 4) {
                     root.width = Math.max(20, startWidth + dx)
                 }
+                root.width = Math.min(root.width, root.boundsWidth)
+                root.height = Math.min(root.height, root.boundsHeight)
+                root.x = Math.max(0, Math.min(root.x, root.boundsWidth - root.width))
+                root.y = Math.max(0, Math.min(root.y, root.boundsHeight - root.height))
             }
 
             onReleased: root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)

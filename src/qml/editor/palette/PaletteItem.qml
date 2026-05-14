@@ -54,27 +54,37 @@ Item {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-
-        // ✅ hotSpot cố định ở tâm item — chuẩn hơn cho palette drag
-        Drag.hotSpot.x: root.width / 2
-        Drag.hotSpot.y: root.height / 2
-
-        // ✅ Dùng mimeData để truyền widgetType thay vì Drag.text
-        Drag.mimeData: {
-            "text/plain": root.widgetType
-        }
-        Drag.active: false
-        Drag.dragType: Drag.Automatic
+        drag.target: dragProxy
+        drag.threshold: 8
 
         onPressed: {
-            Drag.active = true
+            dragProxy.x = 0
+            dragProxy.y = 0
         }
+
         onReleased: {
-            Drag.active = false
+            dragProxy.x = 0
+            dragProxy.y = 0
         }
+
         onClicked: {
-            if (!Drag.active)
+            if (!drag.active)
                 root.itemClicked(root.widgetType)
+        }
+    }
+
+    Item {
+        id: dragProxy
+        width: 1
+        height: 1
+        visible: false
+        Drag.active: mouseArea.drag.active
+        Drag.hotSpot.x: root.width / 2
+        Drag.hotSpot.y: root.height / 2
+        Drag.dragType: Drag.Automatic
+        Drag.mimeData: {
+            "text/plain": root.widgetType,
+            "application/eversight-widget-type": root.widgetType
         }
     }
 }

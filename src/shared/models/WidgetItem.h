@@ -10,6 +10,7 @@ struct WidgetItem
     WidgetItem() = default;
 
     int     id     = -1;
+    int     parentRegionId = 1;
     QString type;
     QString title;
 
@@ -42,6 +43,7 @@ inline WidgetModel toWidgetModel(const ::WidgetItem &w)
     m.type = w.type;
     m.geometry = QRectF(w.x, w.y, w.width, w.height);
     m.properties = w.properties;
+    m.properties.insert("parentRegionId", w.parentRegionId);
     return m;
 }
 

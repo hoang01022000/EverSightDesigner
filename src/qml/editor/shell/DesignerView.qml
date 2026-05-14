@@ -6,7 +6,23 @@ import EverSightDesigner
 
 Item {
     id: root
-    property int zoomPercent: 84
+    property int zoomPercent: 100
+    property bool startupFitApplied: false
+
+    function fitCanvasToWindow() {
+        if (!designCanvas || designCanvas.width <= 0 || designCanvas.height <= 0)
+            return
+        root.zoomPercent = canvasViewModel.fittedZoomPercent(
+                    designCanvas.width,
+                    designCanvas.height,
+                    designCanvas.designWidth,
+                    designCanvas.designHeight,
+                    designCanvas.viewportHorizontalPadding,
+                    designCanvas.viewportVerticalPadding)
+        root.startupFitApplied = true
+    }
+
+    Component.onCompleted: Qt.callLater(root.fitCanvasToWindow)
 
     ColumnLayout {
         anchors.fill: parent
@@ -116,6 +132,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 zoom: root.zoomPercent / 100
+                onWidthChanged: if (!root.startupFitApplied) Qt.callLater(root.fitCanvasToWindow)
+                onHeightChanged: if (!root.startupFitApplied) Qt.callLater(root.fitCanvasToWindow)
             }
 
             InspectorPanel {
