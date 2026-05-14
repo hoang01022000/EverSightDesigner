@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QVariantList>
 #include <QVariantMap>
 #include "../../shared/enums/WidgetCategory.h"
 
@@ -12,6 +13,8 @@ struct WidgetTypeDescriptor
     QString        displayName;
     QString        iconText;
     QString        iconSource;
+    QString        componentSource;
+    QVariantList   propertyDefinitions;
     WidgetCategory category = WidgetCategory::Foundation;
 
     qreal   defaultWidth  = 160.0;

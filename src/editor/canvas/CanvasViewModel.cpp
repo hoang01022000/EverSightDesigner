@@ -8,13 +8,95 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QVariantMap>
 
 #include <algorithm>
+#include <functional>
 
 using namespace eversight;
 
+static QJsonObject layoutNodeToJson(const LayoutNode& node)
+{
+    QJsonObject obj;
+    obj["id"] = node.id;
+    obj["row"] = node.row;
+    obj["column"] = node.column;
+    obj["rowSpan"] = node.rowSpan;
+    obj["columnSpan"] = node.columnSpan;
+    obj["x"] = node.x;
+    obj["y"] = node.y;
+    obj["width"] = node.width;
+    obj["height"] = node.height;
+    obj["assignedWidgetId"] = node.assignedWidgetId;
+
+    QJsonArray children;
+    for (const LayoutNode& child : node.children)
+        children.append(layoutNodeToJson(child));
+    obj["children"] = children;
+    return obj;
+}
+
+static LayoutNode layoutNodeFromJson(const QJsonObject& obj)
+{
+    LayoutNode node;
+    node.id = obj["id"].toInt(1);
+    node.row = obj["row"].toInt();
+    node.column = obj["column"].toInt();
+    node.rowSpan = obj["rowSpan"].toInt(1);
+    node.columnSpan = obj["columnSpan"].toInt(1);
+    node.x = obj["x"].toDouble();
+    node.y = obj["y"].toDouble();
+    node.width = obj["width"].toDouble(1.0);
+    node.height = obj["height"].toDouble(1.0);
+    node.assignedWidgetId = obj["assignedWidgetId"].toInt(-1);
+
+    const QJsonArray children = obj["children"].toArray();
+    for (const QJsonValue& childValue : children)
+        node.children.append(layoutNodeFromJson(childValue.toObject()));
+    return node;
+}
+
+static QJsonObject canvasLayoutToJson(const CanvasLayoutModel& layout)
+{
+    QJsonObject obj;
+    obj["basicLayout"] = int(layout.basicLayout);
+    obj["splitTemplate"] = layout.splitTemplate;
+    obj["customRows"] = layout.customRows;
+    obj["customColumns"] = layout.customColumns;
+    obj["showGrid"] = layout.showGrid;
+    obj["gridLineColor"] = layout.gridLineColor;
+    obj["backgroundColor"] = layout.backgroundColor;
+    obj["nextNodeId"] = layout.nextNodeId;
+    obj["root"] = layoutNodeToJson(layout.root);
+    return obj;
+}
+
+static CanvasLayoutModel canvasLayoutFromJson(const QJsonObject& obj)
+{
+    CanvasLayoutModel layout;
+    layout.basicLayout = static_cast<CanvasLayoutModel::BasicLayout>(obj["basicLayout"].toInt(CanvasLayoutModel::L1));
+    layout.splitTemplate = obj["splitTemplate"].toInt();
+    layout.customRows = qBound(1, obj["customRows"].toInt(1), 10);
+    layout.customColumns = qBound(1, obj["customColumns"].toInt(1), 10);
+    layout.showGrid = obj["showGrid"].toBool(false);
+    layout.gridLineColor = obj["gridLineColor"].toString("#e0e0e0");
+    layout.backgroundColor = obj["backgroundColor"].toString("#ffffff");
+    layout.nextNodeId = qMax(2, obj["nextNodeId"].toInt(2));
+    if (obj.contains("root"))
+        layout.root = layoutNodeFromJson(obj["root"].toObject());
+    layout.selectedCellIds.clear();
+    return layout;
+}
+
 CanvasViewModel::CanvasViewModel(QObject* parent)
-    : QAbstractListModel(parent) {}
+    : QAbstractListModel(parent)
+{
+    CanvasTabModel tab;
+    tab.id = 1;
+    tab.title = QStringLiteral("Tab 1");
+    m_tabs.append(tab);
+    splitLayoutNode(m_tabs[0].layout.root, 1, 1);
+}
 
 // Tab and fixed-bar implementations
 void CanvasViewModel::addTab()
@@ -22,10 +104,14 @@ void CanvasViewModel::addTab()
     CanvasTabModel t;
     t.id = m_tabs.size() + 1;
     t.title = QString("Tab %1").arg(t.id);
+    LayoutNode child;
+    child.id = t.layout.nextNodeId++;
+    t.layout.root.children.append(child);
     beginResetModel();
     m_tabs.append(t);
     endResetModel();
     emit tabsChanged();
+    emit layoutChanged();
 }
 
 void CanvasViewModel::removeTab(int index)
@@ -74,15 +160,185 @@ bool CanvasViewModel::isRightFixedVisible() const { return m_fixedBars.rightVisi
 
 void CanvasViewModel::setBasicLayout(int basicLayout)
 {
-    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return;
-    m_tabs[m_activeTab].layout.basicLayout = static_cast<eversight::CanvasLayoutModel::BasicLayout>(basicLayout);
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout) return;
+
+    int rows = 1;
+    int columns = 1;
+    switch (basicLayout) {
+    case CanvasLayoutModel::L2Horizontal: rows = 2; columns = 1; break;
+    case CanvasLayoutModel::L2Vertical: rows = 1; columns = 2; break;
+    case CanvasLayoutModel::L3Horizontal: rows = 3; columns = 1; break;
+    case CanvasLayoutModel::L3Vertical: rows = 1; columns = 3; break;
+    case CanvasLayoutModel::L4: rows = 2; columns = 2; break;
+    case CanvasLayoutModel::L6Wide: rows = 2; columns = 3; break;
+    case CanvasLayoutModel::L6Tall: rows = 3; columns = 2; break;
+    case CanvasLayoutModel::L9: rows = 3; columns = 3; break;
+    case CanvasLayoutModel::Custom:
+        setCustomLayout(layout->customRows, layout->customColumns);
+        return;
+    case CanvasLayoutModel::L1:
+    default:
+        rows = 1; columns = 1; break;
+    }
+
+    layout->basicLayout = static_cast<CanvasLayoutModel::BasicLayout>(basicLayout);
+    layout->splitTemplate = 0;
+    layout->selectedCellIds.clear();
+    layout->root.children.clear();
+    layout->root.assignedWidgetId = -1;
+    layout->nextNodeId = 2;
+    splitLayoutNode(layout->root, rows, columns);
     emit layoutChanged();
 }
 
 void CanvasViewModel::setSplitTemplate(int tmpl)
 {
-    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return;
-    m_tabs[m_activeTab].layout.splitTemplate = tmpl;
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout) return;
+
+    setLayoutTemplate(*layout, qBound(1, tmpl, 7));
+    emit layoutChanged();
+}
+
+void CanvasViewModel::setCustomLayout(int rows, int columns)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout) return;
+
+    rows = qBound(1, rows, 10);
+    columns = qBound(1, columns, 10);
+    layout->basicLayout = CanvasLayoutModel::Custom;
+    layout->splitTemplate = 0;
+    layout->customRows = rows;
+    layout->customColumns = columns;
+    layout->selectedCellIds.clear();
+    layout->root.children.clear();
+    layout->root.assignedWidgetId = -1;
+    layout->nextNodeId = 2;
+    splitLayoutNode(layout->root, rows, columns);
+    emit layoutChanged();
+}
+
+void CanvasViewModel::splitSelectedLayoutCells(int rows, int columns)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout) return;
+
+    rows = qBound(1, rows, 10);
+    columns = qBound(1, columns, 10);
+    QList<int> selected = layout->selectedCellIds;
+    if (selected.isEmpty())
+        selected.append(layout->root.id);
+
+    for (int id : qAsConst(selected)) {
+        LayoutNode* node = findLayoutNode(id);
+        if (!node)
+            continue;
+        node->assignedWidgetId = -1;
+        splitLayoutNode(*node, rows, columns);
+    }
+
+    layout->selectedCellIds.clear();
+    emit layoutChanged();
+}
+
+void CanvasViewModel::selectLayoutCell(int cellId, bool additive)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout || !findLayoutNode(cellId)) return;
+
+    if (!additive)
+        layout->selectedCellIds.clear();
+
+    if (layout->selectedCellIds.contains(cellId)) {
+        if (additive)
+            layout->selectedCellIds.removeAll(cellId);
+    } else {
+        layout->selectedCellIds.append(cellId);
+    }
+
+    clearSelection();
+    emit layoutChanged();
+}
+
+void CanvasViewModel::clearLayoutCellSelection()
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout || layout->selectedCellIds.isEmpty()) return;
+
+    layout->selectedCellIds.clear();
+    emit layoutChanged();
+}
+
+void CanvasViewModel::assignSelectedWidgetToLayoutCell(int cellId)
+{
+    if (m_selectedWidgetId < 0)
+        return;
+
+    assignWidgetToLayoutCell(m_selectedWidgetId, cellId);
+}
+
+void CanvasViewModel::addWidgetToLayoutCell(const QString& type, int cellId)
+{
+    const LayoutNode* cell = findLayoutNode(cellId);
+    if (!cell || !cell->isLeaf())
+        return;
+
+    pushUndoState();
+    beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
+    WidgetItem item = createWidget(type);
+    item.id = m_nextId++;
+    const qreal canvasWidth = 1280.0;
+    const qreal canvasHeight = 720.0;
+    item.x = cell->x * canvasWidth;
+    item.y = cell->y * canvasHeight;
+    item.width = qMax<qreal>(24.0, cell->width * canvasWidth);
+    item.height = qMax<qreal>(24.0, cell->height * canvasHeight);
+    m_widgets.append(item);
+    m_screen.canvas.widgets.append(eversight::toWidgetModel(item));
+    endInsertRows();
+    emit widgetCountChanged();
+
+    assignWidgetToLayoutCell(item.id, cellId);
+    selectWidget(item.id);
+}
+
+void CanvasViewModel::resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
+                                        const QString& orientation, qreal deltaRatio)
+{
+    LayoutNode* first = findLayoutNode(firstCellId.toInt());
+    LayoutNode* second = findLayoutNode(secondCellId.toInt());
+    if (!first || !second || !first->isLeaf() || !second->isLeaf())
+        return;
+
+    constexpr qreal MIN_CELL_RATIO = 0.05;
+    const bool vertical = orientation == QStringLiteral("vertical");
+
+    if (vertical) {
+        const qreal sharedLeft = first->x;
+        const qreal sharedRight = second->x + second->width;
+        const qreal total = sharedRight - sharedLeft;
+        if (total <= MIN_CELL_RATIO * 2.0) return;
+        const qreal newFirstWidth = qBound(MIN_CELL_RATIO, first->width + deltaRatio, total - MIN_CELL_RATIO);
+        const qreal newSecondWidth = total - newFirstWidth;
+        first->width = newFirstWidth;
+        second->x = first->x + first->width;
+        second->width = newSecondWidth;
+    } else {
+        const qreal sharedTop = first->y;
+        const qreal sharedBottom = second->y + second->height;
+        const qreal total = sharedBottom - sharedTop;
+        if (total <= MIN_CELL_RATIO * 2.0) return;
+        const qreal newFirstHeight = qBound(MIN_CELL_RATIO, first->height + deltaRatio, total - MIN_CELL_RATIO);
+        const qreal newSecondHeight = total - newFirstHeight;
+        first->height = newFirstHeight;
+        second->y = first->y + first->height;
+        second->height = newSecondHeight;
+    }
+
+    updateWidgetGeometryFromLayoutCell(first->assignedWidgetId, *first);
+    updateWidgetGeometryFromLayoutCell(second->assignedWidgetId, *second);
     emit layoutChanged();
 }
 
@@ -96,6 +352,18 @@ int CanvasViewModel::currentSplitTemplate() const
 {
     if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return 0;
     return m_tabs[m_activeTab].layout.splitTemplate;
+}
+
+int CanvasViewModel::currentCustomRows() const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    return layout ? layout->customRows : 1;
+}
+
+int CanvasViewModel::currentCustomColumns() const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    return layout ? layout->customColumns : 1;
 }
 
 bool CanvasViewModel::currentShowGrid() const
@@ -136,6 +404,10 @@ QVariant CanvasViewModel::data(const QModelIndex& index, int role) const
     case HeightRole:      return w.height;
     case TitleRole:       return w.title;
     case SelectedRole:    return m_selectedWidgetIds.contains(w.id);
+    case ComponentSourceRole: {
+        const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w.type);
+        return desc ? desc->componentSource : QStringLiteral("widgets/PlaceholderWidget.qml");
+    }
     case DataSourceRole:  return w.dataSource;
     case ControlTypeRole: return w.controlType;
     case ButtonColorRole: return w.buttonColor;
@@ -157,6 +429,7 @@ QHash<int, QByteArray> CanvasViewModel::roleNames() const
         { HeightRole,      "widgetHeight"      },
         { TitleRole,       "widgetTitle"       },
         { SelectedRole,    "widgetSelected"    },
+        { ComponentSourceRole, "widgetComponentSource" },
         { DataSourceRole,  "widgetDataSource"  },
         { ControlTypeRole, "widgetControlType" },
         { ButtonColorRole, "widgetButtonColor" },
@@ -249,17 +522,28 @@ void CanvasViewModel::removeSelectedWidget()
 {
     const QList<int> rows = selectedRows();
     if (rows.isEmpty()) return;
+    const QList<int> removedWidgetIds = m_selectedWidgetIds;
 
     pushUndoState();
     beginResetModel();
     for (int i = rows.size() - 1; i >= 0; --i)
         m_widgets.removeAt(rows.at(i));
+    if (CanvasLayoutModel* layout = activeLayout()) {
+        std::function<void(LayoutNode&)> clearRemovedAssignments = [&](LayoutNode& node) {
+            if (removedWidgetIds.contains(node.assignedWidgetId))
+                node.assignedWidgetId = -1;
+            for (LayoutNode& child : node.children)
+                clearRemovedAssignments(child);
+        };
+        clearRemovedAssignments(layout->root);
+    }
     syncScreenFromWidgets();
     m_selectedWidgetIds.clear();
     m_selectedWidgetId = -1;
     endResetModel();
     emit widgetCountChanged();
     emit selectedWidgetChanged();
+    emit layoutChanged();
 }
 
 void CanvasViewModel::duplicateSelectedWidget()
@@ -512,6 +796,7 @@ void CanvasViewModel::updateSelectedTitle(const QString& title)
     if (m_widgets[row].title == title) return;
     pushUndoState();
     m_widgets[row].title = title;
+    m_widgets[row].properties.insert("text", title);
     emit dataChanged(index(row,0), index(row,0), { TitleRole });
     emit selectedWidgetChanged();
 }
@@ -524,6 +809,8 @@ void CanvasViewModel::updateSelectedData(const QString& dataSource, const QStrin
     pushUndoState();
     m_widgets[row].dataSource  = dataSource;
     m_widgets[row].controlType = controlType;
+    m_widgets[row].properties.insert("dataSource", dataSource);
+    m_widgets[row].properties.insert("controlType", controlType);
     emit dataChanged(index(row,0), index(row,0), { DataSourceRole, ControlTypeRole });
     emit selectedWidgetChanged();
 }
@@ -540,6 +827,9 @@ void CanvasViewModel::updateSelectedAppearance(const QString& buttonColor, const
     m_widgets[row].buttonColor = buttonColor;
     m_widgets[row].borderColor = borderColor;
     m_widgets[row].iconColor   = iconColor;
+    m_widgets[row].properties.insert("background", buttonColor);
+    m_widgets[row].properties.insert("border", borderColor);
+    m_widgets[row].properties.insert("iconColor", iconColor);
     emit dataChanged(index(row,0), index(row,0), { ButtonColorRole, BorderColorRole, IconColorRole });
     emit selectedWidgetChanged();
 }
@@ -551,7 +841,60 @@ void CanvasViewModel::updateSelectedAutoFill(bool autoFill)
     if (m_widgets[row].autoFill == autoFill) return;
     pushUndoState();
     m_widgets[row].autoFill = autoFill;
+    m_widgets[row].properties.insert("autoFill", autoFill);
     emit dataChanged(index(row,0), index(row,0), { AutoFillRole });
+    emit selectedWidgetChanged();
+}
+
+QVariant CanvasViewModel::selectedPropertyValue(const QString& key) const
+{
+    const WidgetItem* w = selectedWidget();
+    if (!w) return {};
+
+    if (key == "dataSource") return w->dataSource;
+    if (key == "controlType") return w->controlType;
+    if (key == "iconColor") return w->iconColor;
+    if (key == "background" || key == "buttonColor") return w->buttonColor;
+    if (key == "border" || key == "borderColor") return w->borderColor;
+    if (key == "autoFill") return w->autoFill;
+    if (key == "text") return w->title;
+
+    return w->properties.value(key);
+}
+
+void CanvasViewModel::updateSelectedProperty(const QString& key, const QVariant& value)
+{
+    const int row = indexOfWidget(m_selectedWidgetId);
+    if (row < 0 || key.isEmpty()) return;
+
+    WidgetItem& w = m_widgets[row];
+    if (selectedPropertyValue(key) == value) return;
+
+    pushUndoState();
+
+    if (key == "dataSource") {
+        w.dataSource = value.toString();
+    } else if (key == "controlType") {
+        w.controlType = value.toString();
+    } else if (key == "iconColor") {
+        w.iconColor = value.toString();
+    } else if (key == "background" || key == "buttonColor") {
+        w.buttonColor = value.toString();
+    } else if (key == "border" || key == "borderColor") {
+        w.borderColor = value.toString();
+    } else if (key == "autoFill") {
+        w.autoFill = value.toBool();
+    } else if (key == "text") {
+        w.title = value.toString();
+    }
+
+    w.properties.insert(key, value);
+    syncScreenFromWidgets();
+
+    const QModelIndex mi = index(row, 0);
+    emit dataChanged(mi, mi, { TitleRole, DataSourceRole, ControlTypeRole,
+                               ButtonColorRole, BorderColorRole, IconColorRole,
+                               AutoFillRole });
     emit selectedWidgetChanged();
 }
 
@@ -564,9 +907,19 @@ void CanvasViewModel::clear()
     // Keep shadow screen model empty as well
     m_screen.canvas.widgets.clear();
     m_selectedWidgetId = -1;
+    m_selectedWidgetIds.clear();
+    if (CanvasLayoutModel* layout = activeLayout()) {
+        std::function<void(LayoutNode&)> clearAssignments = [&](LayoutNode& node) {
+            node.assignedWidgetId = -1;
+            for (LayoutNode& child : node.children)
+                clearAssignments(child);
+        };
+        clearAssignments(layout->root);
+    }
     endResetModel();
     emit widgetCountChanged();
     emit selectedWidgetChanged();
+    emit layoutChanged();
 }
 
 bool CanvasViewModel::saveToFile(const QString& filePath) const
@@ -587,12 +940,15 @@ bool CanvasViewModel::saveToFile(const QString& filePath) const
         obj["borderColor"] = w.borderColor;
         obj["iconColor"]   = w.iconColor;
         obj["autoFill"]    = w.autoFill;
+        obj["properties"]  = QJsonObject::fromVariantMap(w.properties);
         widgets.append(obj);
     }
     QJsonObject root;
     root["schema"]  = "EverSightDesigner.Layout.v1";
     root["nextId"]  = m_nextId;
     root["widgets"] = widgets;
+    if (const CanvasLayoutModel* layout = activeLayout())
+        root["layout"] = canvasLayoutToJson(*layout);
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
@@ -625,6 +981,7 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
         w.borderColor = obj["borderColor"].toString("#272727");
         w.iconColor   = obj["iconColor"].toString("#f6f6f6");
         w.autoFill    = obj["autoFill"].toBool(false);
+        w.properties  = obj["properties"].toObject().toVariantMap();
         if (w.id <= 0 || w.type.isEmpty()) continue;
         maxId = qMax(maxId, w.id);
         loaded.append(w);
@@ -634,6 +991,16 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
     m_nextId           = qMax(root["nextId"].toInt(maxId + 1), maxId + 1);
     m_selectedWidgetId = -1;
     m_selectedWidgetIds.clear();
+    if (root.contains("layout")) {
+        if (m_tabs.isEmpty()) {
+            CanvasTabModel tab;
+            tab.id = 1;
+            tab.title = QStringLiteral("Tab 1");
+            m_tabs.append(tab);
+            m_activeTab = 0;
+        }
+        m_tabs[m_activeTab].layout = canvasLayoutFromJson(root["layout"].toObject());
+    }
     // Rebuild shadow screen model to mirror loaded widgets
     m_screen.canvas.widgets.clear();
     for (const WidgetItem &w : qAsConst(m_widgets))
@@ -641,6 +1008,7 @@ bool CanvasViewModel::loadFromFile(const QString& filePath)
     endResetModel();
     emit widgetCountChanged();
     emit selectedWidgetChanged();
+    emit layoutChanged();
     m_undoStack.clear();
     m_redoStack.clear();
     emit undoRedoChanged();
@@ -666,6 +1034,122 @@ int     CanvasViewModel::selectedCount()        const { return m_selectedWidgetI
 int     CanvasViewModel::widgetCount()          const { return m_widgets.size(); }
 bool    CanvasViewModel::canUndo()              const { return !m_undoStack.isEmpty(); }
 bool    CanvasViewModel::canRedo()              const { return !m_redoStack.isEmpty(); }
+
+QVariantList CanvasViewModel::selectedPropertyDefinitions() const
+{
+    const WidgetItem* w = selectedWidget();
+    if (!w) return {};
+
+    const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w->type);
+    return desc ? desc->propertyDefinitions : QVariantList{};
+}
+
+QVariantList CanvasViewModel::layoutCells() const
+{
+    QVariantList cells;
+    const CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return cells;
+
+    std::function<void(const LayoutNode&, int)> appendLeaves = [&](const LayoutNode& node, int depth) {
+        if (node.isLeaf()) {
+            QVariantMap cell;
+            cell.insert("id", node.id);
+            cell.insert("x", node.x);
+            cell.insert("y", node.y);
+            cell.insert("width", node.width);
+            cell.insert("height", node.height);
+            cell.insert("row", node.row);
+            cell.insert("column", node.column);
+            cell.insert("rowSpan", node.rowSpan);
+            cell.insert("columnSpan", node.columnSpan);
+            cell.insert("depth", depth);
+            cell.insert("assignedWidgetId", node.assignedWidgetId);
+            cell.insert("selected", layout->selectedCellIds.contains(node.id));
+            cells.append(cell);
+            return;
+        }
+
+        for (const LayoutNode& child : node.children)
+            appendLeaves(child, depth + 1);
+    };
+
+    appendLeaves(layout->root, 0);
+    return cells;
+}
+
+QVariantList CanvasViewModel::layoutResizeHandles() const
+{
+    QVariantList handles;
+    const QVariantList cells = layoutCells();
+    constexpr qreal EPSILON = 0.0001;
+
+    for (int i = 0; i < cells.size(); ++i) {
+        const QVariantMap a = cells.at(i).toMap();
+        const qreal ax = a.value("x").toReal();
+        const qreal ay = a.value("y").toReal();
+        const qreal aw = a.value("width").toReal();
+        const qreal ah = a.value("height").toReal();
+        for (int j = i + 1; j < cells.size(); ++j) {
+            const QVariantMap b = cells.at(j).toMap();
+            const qreal bx = b.value("x").toReal();
+            const qreal by = b.value("y").toReal();
+            const qreal bw = b.value("width").toReal();
+            const qreal bh = b.value("height").toReal();
+
+            const qreal verticalOverlap = qMin(ay + ah, by + bh) - qMax(ay, by);
+            if (qAbs((ax + aw) - bx) < EPSILON && verticalOverlap > EPSILON) {
+                QVariantMap handle;
+                handle.insert("firstCellId", a.value("id"));
+                handle.insert("secondCellId", b.value("id"));
+                handle.insert("orientation", "vertical");
+                handle.insert("x", bx);
+                handle.insert("y", qMax(ay, by) + verticalOverlap / 2.0);
+                handles.append(handle);
+            } else if (qAbs((bx + bw) - ax) < EPSILON && verticalOverlap > EPSILON) {
+                QVariantMap handle;
+                handle.insert("firstCellId", b.value("id"));
+                handle.insert("secondCellId", a.value("id"));
+                handle.insert("orientation", "vertical");
+                handle.insert("x", ax);
+                handle.insert("y", qMax(ay, by) + verticalOverlap / 2.0);
+                handles.append(handle);
+            }
+
+            const qreal horizontalOverlap = qMin(ax + aw, bx + bw) - qMax(ax, bx);
+            if (qAbs((ay + ah) - by) < EPSILON && horizontalOverlap > EPSILON) {
+                QVariantMap handle;
+                handle.insert("firstCellId", a.value("id"));
+                handle.insert("secondCellId", b.value("id"));
+                handle.insert("orientation", "horizontal");
+                handle.insert("x", qMax(ax, bx) + horizontalOverlap / 2.0);
+                handle.insert("y", by);
+                handles.append(handle);
+            } else if (qAbs((by + bh) - ay) < EPSILON && horizontalOverlap > EPSILON) {
+                QVariantMap handle;
+                handle.insert("firstCellId", b.value("id"));
+                handle.insert("secondCellId", a.value("id"));
+                handle.insert("orientation", "horizontal");
+                handle.insert("x", qMax(ax, bx) + horizontalOverlap / 2.0);
+                handle.insert("y", ay);
+                handles.append(handle);
+            }
+        }
+    }
+
+    return handles;
+}
+
+int CanvasViewModel::selectedLayoutCellId() const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    return layout && !layout->selectedCellIds.isEmpty() ? layout->selectedCellIds.last() : -1;
+}
+
+bool CanvasViewModel::hasSelectedLayoutCell() const
+{
+    return selectedLayoutCellId() >= 0;
+}
 
 int CanvasViewModel::indexOfWidget(int id) const
 {
@@ -697,6 +1181,8 @@ CanvasViewModel::StateSnapshot CanvasViewModel::snapshot() const
     state.selectedWidgetIds = m_selectedWidgetIds;
     state.primarySelectedWidgetId = m_selectedWidgetId;
     state.nextId = m_nextId;
+    state.tabs = m_tabs;
+    state.activeTab = m_activeTab;
     return state;
 }
 
@@ -707,11 +1193,14 @@ void CanvasViewModel::restoreSnapshot(const StateSnapshot& state)
     m_selectedWidgetIds = state.selectedWidgetIds;
     m_selectedWidgetId = state.primarySelectedWidgetId;
     m_nextId = state.nextId;
+    m_tabs = state.tabs;
+    m_activeTab = state.activeTab;
     syncScreenFromWidgets();
     endResetModel();
 
     emit widgetCountChanged();
     emit selectedWidgetChanged();
+    emit layoutChanged();
 }
 
 void CanvasViewModel::pushUndoState()
@@ -755,6 +1244,212 @@ void CanvasViewModel::setSelection(const QList<int>& ids, int primaryId)
 
     m_selectedWidgetIds = normalized;
     m_selectedWidgetId = normalized.isEmpty() ? -1 : primaryId;
+    if (!normalized.isEmpty()) {
+        CanvasLayoutModel* layout = activeLayout();
+        if (layout)
+            layout->selectedCellIds.clear();
+    }
     emitAllWidgetDataChanged();
     emit selectedWidgetChanged();
+    emit layoutChanged();
+}
+
+CanvasLayoutModel* CanvasViewModel::activeLayout()
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size())
+        return nullptr;
+    return &m_tabs[m_activeTab].layout;
+}
+
+const CanvasLayoutModel* CanvasViewModel::activeLayout() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size())
+        return nullptr;
+    return &m_tabs[m_activeTab].layout;
+}
+
+LayoutNode* CanvasViewModel::findLayoutNode(int id)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return nullptr;
+
+    std::function<LayoutNode*(LayoutNode&)> find = [&](LayoutNode& node) -> LayoutNode* {
+        if (node.id == id)
+            return &node;
+        for (LayoutNode& child : node.children) {
+            if (LayoutNode* found = find(child))
+                return found;
+        }
+        return nullptr;
+    };
+
+    return find(layout->root);
+}
+
+const LayoutNode* CanvasViewModel::findLayoutNode(int id) const
+{
+    const CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return nullptr;
+
+    std::function<const LayoutNode*(const LayoutNode&)> find = [&](const LayoutNode& node) -> const LayoutNode* {
+        if (node.id == id)
+            return &node;
+        for (const LayoutNode& child : node.children) {
+            if (const LayoutNode* found = find(child))
+                return found;
+        }
+        return nullptr;
+    };
+
+    return find(layout->root);
+}
+
+void CanvasViewModel::splitLayoutNode(LayoutNode& node, int rows, int columns)
+{
+    CanvasLayoutModel* layout = activeLayout();
+    rows = qBound(1, rows, 10);
+    columns = qBound(1, columns, 10);
+    node.children.clear();
+
+    for (int row = 0; row < rows; ++row) {
+        for (int column = 0; column < columns; ++column) {
+            LayoutNode child;
+            child.id = layout ? nextLayoutNodeId(*layout) : (row * columns + column + 2);
+            child.row = row;
+            child.column = column;
+            child.rowSpan = 1;
+            child.columnSpan = 1;
+            child.x = node.x + node.width * qreal(column) / qreal(columns);
+            child.y = node.y + node.height * qreal(row) / qreal(rows);
+            child.width = node.width / qreal(columns);
+            child.height = node.height / qreal(rows);
+            node.children.append(child);
+        }
+    }
+}
+
+void CanvasViewModel::setLayoutTemplate(CanvasLayoutModel& layout, int tmpl)
+{
+    layout.basicLayout = CanvasLayoutModel::Custom;
+    layout.splitTemplate = tmpl;
+    layout.selectedCellIds.clear();
+    layout.root.children.clear();
+    layout.root.assignedWidgetId = -1;
+    layout.nextNodeId = 2;
+
+    auto addCell = [&](int row, int column, int rowSpan, int columnSpan, int gridRows, int gridColumns) {
+        LayoutNode child;
+        child.id = nextLayoutNodeId(layout);
+        child.row = row;
+        child.column = column;
+        child.rowSpan = rowSpan;
+        child.columnSpan = columnSpan;
+        child.x = qreal(column) / qreal(gridColumns);
+        child.y = qreal(row) / qreal(gridRows);
+        child.width = qreal(columnSpan) / qreal(gridColumns);
+        child.height = qreal(rowSpan) / qreal(gridRows);
+        layout.root.children.append(child);
+    };
+
+    switch (tmpl) {
+    case 2:
+        addCell(0, 0, 1, 2, 2, 3);
+        addCell(1, 0, 1, 1, 2, 3);
+        addCell(1, 1, 1, 1, 2, 3);
+        addCell(0, 2, 2, 1, 2, 3);
+        break;
+    case 3:
+        addCell(0, 0, 1, 3, 3, 3);
+        addCell(1, 0, 2, 1, 3, 3);
+        addCell(1, 1, 1, 1, 3, 3);
+        addCell(1, 2, 1, 1, 3, 3);
+        addCell(2, 1, 1, 2, 3, 3);
+        break;
+    case 4:
+        addCell(0, 0, 2, 2, 3, 3);
+        addCell(0, 2, 1, 1, 3, 3);
+        addCell(1, 2, 1, 1, 3, 3);
+        addCell(2, 0, 1, 1, 3, 3);
+        addCell(2, 1, 1, 2, 3, 3);
+        break;
+    case 5:
+        addCell(0, 0, 1, 1, 3, 3);
+        addCell(0, 1, 1, 2, 3, 3);
+        addCell(1, 0, 1, 2, 3, 3);
+        addCell(1, 2, 2, 1, 3, 3);
+        addCell(2, 0, 1, 1, 3, 3);
+        addCell(2, 1, 1, 1, 3, 3);
+        break;
+    case 6:
+        addCell(0, 0, 3, 1, 3, 4);
+        addCell(0, 1, 1, 2, 3, 4);
+        addCell(0, 3, 1, 1, 3, 4);
+        addCell(1, 1, 2, 1, 3, 4);
+        addCell(1, 2, 1, 2, 3, 4);
+        addCell(2, 2, 1, 2, 3, 4);
+        break;
+    case 7:
+        addCell(0, 0, 1, 1, 4, 4);
+        addCell(0, 1, 1, 2, 4, 4);
+        addCell(0, 3, 2, 1, 4, 4);
+        addCell(1, 0, 2, 2, 4, 4);
+        addCell(1, 2, 1, 1, 4, 4);
+        addCell(2, 2, 2, 2, 4, 4);
+        addCell(3, 0, 1, 2, 4, 4);
+        break;
+    case 1:
+    default:
+        addCell(0, 0, 2, 2, 2, 3);
+        addCell(0, 2, 1, 1, 2, 3);
+        addCell(1, 2, 1, 1, 2, 3);
+        break;
+    }
+}
+
+int CanvasViewModel::nextLayoutNodeId(CanvasLayoutModel& layout)
+{
+    return layout.nextNodeId++;
+}
+
+void CanvasViewModel::assignWidgetToLayoutCell(int widgetId, int cellId)
+{
+    LayoutNode* cell = findLayoutNode(cellId);
+    if (!cell || !cell->isLeaf() || indexOfWidget(widgetId) < 0)
+        return;
+
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return;
+
+    std::function<void(LayoutNode&)> clearExisting = [&](LayoutNode& node) {
+        if (node.assignedWidgetId == widgetId)
+            node.assignedWidgetId = -1;
+        for (LayoutNode& child : node.children)
+            clearExisting(child);
+    };
+    clearExisting(layout->root);
+
+    cell->assignedWidgetId = widgetId;
+    updateWidgetGeometryFromLayoutCell(widgetId, *cell);
+    emit layoutChanged();
+}
+
+void CanvasViewModel::updateWidgetGeometryFromLayoutCell(int widgetId, const LayoutNode& cell)
+{
+    const int row = indexOfWidget(widgetId);
+    if (row < 0)
+        return;
+
+    WidgetItem& widget = m_widgets[row];
+    widget.x = cell.x * 1280.0;
+    widget.y = cell.y * 720.0;
+    widget.width = qMax<qreal>(24.0, cell.width * 1280.0);
+    widget.height = qMax<qreal>(24.0, cell.height * 720.0);
+
+    if (row >= 0 && row < m_screen.canvas.widgets.size())
+        m_screen.canvas.widgets[row].geometry = QRectF(widget.x, widget.y, widget.width, widget.height);
+
+    emit dataChanged(index(row, 0), index(row, 0), { XRole, YRole, WidthRole, HeightRole });
 }

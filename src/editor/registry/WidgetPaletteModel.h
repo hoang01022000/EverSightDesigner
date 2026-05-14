@@ -15,6 +15,7 @@ public:
         TypeIdRole = Qt::UserRole + 1,
         DisplayNameRole,
         IconSourceRole,
+        ComponentSourceRole,
         CategoryRole,
         DescriptionRole
     };

@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QList>
+#include <QVariantList>
 #include "../../shared/models/WidgetItem.h"
 #include "../../shared/models/ScreenModel.h"
 #include "../../shared/models/CanvasTabModel.h"
@@ -29,8 +30,15 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(int     widgetCount          READ widgetCount          NOTIFY widgetCountChanged)
     Q_PROPERTY(bool    canUndo              READ canUndo              NOTIFY undoRedoChanged)
     Q_PROPERTY(bool    canRedo              READ canRedo              NOTIFY undoRedoChanged)
+    Q_PROPERTY(QVariantList selectedPropertyDefinitions READ selectedPropertyDefinitions NOTIFY selectedWidgetChanged)
     Q_PROPERTY(int     currentBasicLayout   READ currentBasicLayout   NOTIFY layoutChanged)
     Q_PROPERTY(int     currentSplitTemplate READ currentSplitTemplate NOTIFY layoutChanged)
+    Q_PROPERTY(int     currentCustomRows READ currentCustomRows NOTIFY layoutChanged)
+    Q_PROPERTY(int     currentCustomColumns READ currentCustomColumns NOTIFY layoutChanged)
+    Q_PROPERTY(QVariantList layoutCells READ layoutCells NOTIFY layoutChanged)
+    Q_PROPERTY(QVariantList layoutResizeHandles READ layoutResizeHandles NOTIFY layoutChanged)
+    Q_PROPERTY(int selectedLayoutCellId READ selectedLayoutCellId NOTIFY layoutChanged)
+    Q_PROPERTY(bool hasSelectedLayoutCell READ hasSelectedLayoutCell NOTIFY layoutChanged)
     Q_PROPERTY(bool    currentShowGrid      READ currentShowGrid      NOTIFY layoutChanged)
     Q_PROPERTY(QString currentGridLineColor READ currentGridLineColor NOTIFY layoutChanged)
     Q_PROPERTY(QString currentBackgroundColor READ currentBackgroundColor NOTIFY layoutChanged)
@@ -47,7 +55,7 @@ public:
     enum Roles {
         IdRole = Qt::UserRole + 1,
         TypeRole, XRole, YRole, WidthRole, HeightRole,
-        TitleRole, SelectedRole, DataSourceRole, ControlTypeRole,
+        TitleRole, SelectedRole, ComponentSourceRole, DataSourceRole, ControlTypeRole,
         ButtonColorRole, BorderColorRole, IconColorRole, AutoFillRole
     };
 
@@ -69,6 +77,8 @@ public:
     Q_INVOKABLE void updateSelectedData(const QString& dataSource, const QString& controlType);
     Q_INVOKABLE void updateSelectedAppearance(const QString& buttonColor, const QString& borderColor, const QString& iconColor);
     Q_INVOKABLE void updateSelectedAutoFill(bool autoFill);
+    Q_INVOKABLE QVariant selectedPropertyValue(const QString& key) const;
+    Q_INVOKABLE void updateSelectedProperty(const QString& key, const QVariant& value);
     Q_INVOKABLE void bringSelectedToFront();
     Q_INVOKABLE void bringSelectedForward();
     Q_INVOKABLE void sendSelectedToBack();
@@ -100,8 +110,18 @@ public:
     Q_INVOKABLE bool isRightFixedVisible() const;
     Q_INVOKABLE void setBasicLayout(int basicLayout);
     Q_INVOKABLE void setSplitTemplate(int tmpl);
+    Q_INVOKABLE void setCustomLayout(int rows, int columns);
+    Q_INVOKABLE void splitSelectedLayoutCells(int rows, int columns);
+    Q_INVOKABLE void selectLayoutCell(int cellId, bool additive = false);
+    Q_INVOKABLE void clearLayoutCellSelection();
+    Q_INVOKABLE void assignSelectedWidgetToLayoutCell(int cellId);
+    Q_INVOKABLE void addWidgetToLayoutCell(const QString& type, int cellId);
+    Q_INVOKABLE void resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
+                                       const QString& orientation, qreal deltaRatio);
     Q_INVOKABLE int  currentBasicLayout() const;
     Q_INVOKABLE int  currentSplitTemplate() const;
+    Q_INVOKABLE int  currentCustomRows() const;
+    Q_INVOKABLE int  currentCustomColumns() const;
     Q_INVOKABLE bool currentShowGrid() const;
     Q_INVOKABLE QString currentGridLineColor() const;
     Q_INVOKABLE QString currentBackgroundColor() const;
@@ -124,6 +144,11 @@ public:
     int     widgetCount()          const;
     bool    canUndo()              const;
     bool    canRedo()              const;
+    QVariantList selectedPropertyDefinitions() const;
+    QVariantList layoutCells() const;
+    QVariantList layoutResizeHandles() const;
+    int selectedLayoutCellId() const;
+    bool hasSelectedLayoutCell() const;
 
 signals:
     void selectedWidgetChanged();
@@ -141,6 +166,8 @@ private:
         QList<int> selectedWidgetIds;
         int primarySelectedWidgetId = -1;
         int nextId = 1;
+        QList<eversight::CanvasTabModel> tabs;
+        int activeTab = 0;
     };
 
     WidgetItem        createWidget(const QString& type) const;
@@ -153,6 +180,15 @@ private:
     void              syncScreenFromWidgets();
     void              emitAllWidgetDataChanged();
     void              setSelection(const QList<int>& ids, int primaryId);
+    eversight::CanvasLayoutModel* activeLayout();
+    const eversight::CanvasLayoutModel* activeLayout() const;
+    eversight::LayoutNode* findLayoutNode(int id);
+    const eversight::LayoutNode* findLayoutNode(int id) const;
+    void splitLayoutNode(eversight::LayoutNode& node, int rows, int columns);
+    void setLayoutTemplate(eversight::CanvasLayoutModel& layout, int tmpl);
+    int nextLayoutNodeId(eversight::CanvasLayoutModel& layout);
+    void assignWidgetToLayoutCell(int widgetId, int cellId);
+    void updateWidgetGeometryFromLayoutCell(int widgetId, const eversight::LayoutNode& cell);
 
     QList<WidgetItem> m_widgets;
     int               m_nextId           = 1;

@@ -10,6 +10,20 @@ Item {
     readonly property real viewportHorizontalPadding: 48
     readonly property real viewportVerticalPadding: 48
 
+    function cellAt(stageX, stageY) {
+        var cells = canvasViewModel.layoutCells
+        var normalizedX = stageX / root.designWidth
+        var normalizedY = stageY / root.designHeight
+        for (var i = cells.length - 1; i >= 0; --i) {
+            var cell = cells[i]
+            if (normalizedX >= cell.x && normalizedX <= cell.x + cell.width
+                    && normalizedY >= cell.y && normalizedY <= cell.y + cell.height) {
+                return cell
+            }
+        }
+        return null
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "#303437"
@@ -154,13 +168,24 @@ Item {
                         if (!type || type.length === 0)
                             return
 
-                        canvasViewModel.addWidgetAt(type, position.x / root.zoom, position.y / root.zoom)
+                        var targetCell = root.cellAt(position.x / root.zoom, position.y / root.zoom)
+                        if (targetCell)
+                            canvasViewModel.addWidgetToLayoutCell(type, targetCell.id)
+                        else
+                            canvasViewModel.addWidgetAt(type, position.x / root.zoom, position.y / root.zoom)
                     }
                 }
 
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: canvasViewModel.clearSelection()
+                    onClicked: function(mouse) {
+                        var targetCell = root.cellAt(mouse.x, mouse.y)
+                        if (targetCell)
+                            canvasViewModel.selectLayoutCell(targetCell.id,
+                                                             (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
+                        else
+                            canvasViewModel.clearSelection()
+                    }
                 }
 
                 Rectangle {
@@ -194,6 +219,33 @@ Item {
                 }
 
                 Repeater {
+                    model: canvasViewModel.layoutCells.length
+
+                    delegate: Rectangle {
+                        readonly property var cell: canvasViewModel.layoutCells[index]
+
+                        x: cell.x * root.designWidth
+                        y: cell.y * root.designHeight
+                        width: cell.width * root.designWidth
+                        height: cell.height * root.designHeight
+                        color: cell.selected ? "#243c4c55" : "transparent"
+                        border.color: cell.selected ? "#1e9bff" : "#ff7a00"
+                        border.width: cell.selected ? 2 : 1
+                        z: 0.5
+
+                        Label {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.margins: 6
+                            text: "Cell " + cell.id
+                            color: "#d8dee3"
+                            font.pixelSize: 11
+                            visible: parent.width > 80 && parent.height > 36
+                        }
+                    }
+                }
+
+                Repeater {
                     model: canvasViewModel
 
                     delegate: WidgetNode {
@@ -203,12 +255,14 @@ Item {
                         buttonColor: model.widgetButtonColor
                         borderColorValue: model.widgetBorderColor
                         iconColor: model.widgetIconColor
+                        componentSource: model.widgetComponentSource
                         selected: model.widgetSelected
 
                         x: model.widgetX
                         y: model.widgetY
                         width: model.widgetWidth
                         height: model.widgetHeight
+                        z: model.widgetSelected ? 100 : 10
 
                         onSelectedRequested: function(id, additive) {
                             canvasViewModel.selectWidget(id, additive)
@@ -216,6 +270,62 @@ Item {
 
                         onGeometryCommitted: function(id, newX, newY, newWidth, newHeight) {
                             canvasViewModel.updateWidgetGeometry(id, newX, newY, newWidth, newHeight)
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: canvasViewModel.layoutResizeHandles.length
+
+                    delegate: Item {
+                        readonly property var handle: canvasViewModel.layoutResizeHandles[index]
+
+                        x: handle.x * root.designWidth - width / 2
+                        y: handle.y * root.designHeight - height / 2
+                        width: 18
+                        height: 18
+                        z: 2000
+
+                        Canvas {
+                            anchors.fill: parent
+                            rotation: handle.orientation === "vertical" ? 90 : 0
+                            onPaint: {
+                                var ctx = getContext("2d")
+                                ctx.clearRect(0, 0, width, height)
+                                ctx.fillStyle = "#ff7a00"
+                                ctx.beginPath()
+                                ctx.moveTo(width / 2, 2)
+                                ctx.lineTo(width - 2, height - 2)
+                                ctx.lineTo(2, height - 2)
+                                ctx.closePath()
+                                ctx.fill()
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -5
+                            cursorShape: handle.orientation === "vertical" ? Qt.SizeHorCursor : Qt.SizeVerCursor
+
+                            property real lastX: 0
+                            property real lastY: 0
+
+                            onPressed: function(mouse) {
+                                lastX = mouse.x
+                                lastY = mouse.y
+                            }
+
+                            onPositionChanged: function(mouse) {
+                                var delta = handle.orientation === "vertical"
+                                        ? (mouse.x - lastX) / root.designWidth
+                                        : (mouse.y - lastY) / root.designHeight
+                                lastX = mouse.x
+                                lastY = mouse.y
+                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
+                                                                  String(handle.secondCellId),
+                                                                  handle.orientation,
+                                                                  delta)
+                            }
                         }
                     }
                 }

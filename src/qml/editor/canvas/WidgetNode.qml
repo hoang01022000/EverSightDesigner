@@ -4,55 +4,18 @@ import QtQuick.Controls
 Item {
     id: root
 
-    // --- Properties kết nối với Model/Logic ---
     property int widgetId: -1
     property string widgetType: "Widget"
     property string widgetTitle: "Widget"
     property string buttonColor: "#2f2f2f"
     property string borderColorValue: "#272727"
     property string iconColor: "#f6f6f6"
+    property string componentSource: "widgets/PlaceholderWidget.qml"
     property bool selected: false
 
-    // --- Signals ---
     signal selectedRequested(int id, bool additive)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
 
-    // --- Logic tự động tìm Widget theo thư mục ---
-    function getWidgetSource(type) {
-        // Các typeId đầy đủ theo Widget Configuration Reference
-        const foundationList = ["Image", "MultipleImages", "RunControl", "RunStatus", "OKNG", "Textbox", "Button", "SwitchControl", "ParamsSettings", "VariableSettings", "CharacterSettings", "TrafficLight", "ConditionalLight"];
-        const layoutList = ["GroupBox", "ChildInterface", "TabControl"];
-        const chartList = ["Table", "LineDiagramArray", "MultiLineDiagram", "ProductionStatistics", "PieControl", "ParamSettingsArray", "LabelArray"];
-
-        var subFolder = "Foundation";
-        var fileName = type;
-
-        if (layoutList.indexOf(type) !== -1) {
-            subFolder = "Layout";
-        } else if (chartList.indexOf(type) !== -1) {
-            subFolder = "Chart";
-        } else if (foundationList.indexOf(type) === -1) {
-            return "widgets/PlaceholderWidget.qml";
-        }
-
-        // Những ánh xạ tên file đặc thù (nếu file QML vật lý khác tên typeId)
-        if (type === "MultipleImages") fileName = "Image";
-        if (type === "SwitchControl") fileName = "Button";
-        if (type === "DataTable") fileName = "Table";
-
-        var candidate = "widgets/" + subFolder + "/" + fileName + "Widget.qml";
-
-        // Nếu file QML cụ thể chưa tồn tại, trả về PlaceholderWidget.qml
-        try {
-            var comp = Qt.createComponent(candidate);
-            if (comp.status === Component.Ready) return candidate;
-            return "widgets/PlaceholderWidget.qml";
-        } catch (e) {
-            return "widgets/PlaceholderWidget.qml";
-        }
-    }
-
-    // --- Khung hiển thị khi được chọn ---
     Rectangle {
         anchors.fill: parent
         color: "transparent"
@@ -61,46 +24,48 @@ Item {
         z: 1
     }
 
-    // --- Nội dung Widget hiển thị ---
     Loader {
         id: widgetLoader
         anchors.fill: parent
         anchors.margins: root.selected ? 2 : 0
-        source: getWidgetSource(root.widgetType)
+        source: root.componentSource.length > 0
+                ? root.componentSource
+                : "widgets/PlaceholderWidget.qml"
 
         onLoaded: {
-            if (!item) return
-            // Ràng buộc dữ liệu từ Node xuống Widget con (Appearance settings)
-            item.bgColor = Qt.binding(() => root.buttonColor)
-            item.borderColor = Qt.binding(() => root.borderColorValue)
-            item.fontColor = Qt.binding(() => root.iconColor)
+            if (!item)
+                return
 
-            // Kiểm tra thuộc tính tồn tại trước khi bind để tránh lỗi log
-            if (item.hasOwnProperty("labelText")) item.labelText = Qt.binding(() => root.widgetTitle)
-            if (item.hasOwnProperty("showText")) item.showText = Qt.binding(() => root.widgetTitle)
+            item.bgColor = Qt.binding(function() { return root.buttonColor })
+            item.borderColor = Qt.binding(function() { return root.borderColorValue })
+            item.fontColor = Qt.binding(function() { return root.iconColor })
+
+            if (item.hasOwnProperty("labelText"))
+                item.labelText = Qt.binding(function() { return root.widgetTitle })
+            if (item.hasOwnProperty("showText"))
+                item.showText = Qt.binding(function() { return root.widgetTitle })
         }
     }
 
-    // --- MouseArea chính để Di chuyển (Drag) ---
     MouseArea {
         anchors.fill: parent
         drag.target: root
         drag.threshold: 8
 
         onPressed: function(mouse) {
-            root.z = 999 // Đưa lên trên cùng khi đang thao tác
+            root.z = 999
             root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
         }
+
         onReleased: {
             root.z = 1
             root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
         }
     }
 
-    // --- RE-SIZE HANDLES (Gồm 8 điểm điều hướng) ---
-    // Component con dùng chung cho các góc và cạnh
     component ResizeHandle: Rectangle {
-        property int handlePos: 0 // 0:TL, 1:T, 2:TR, 3:R, 4:BR, 5:B, 6:BL, 7:L
+        property int handlePos: 0
+
         width: 8
         height: 8
         color: "#ffffff"
@@ -111,52 +76,60 @@ Item {
 
         MouseArea {
             anchors.fill: parent
-            anchors.margins: -5 // Tăng diện tích nhận diện chuột
+            anchors.margins: -5
             cursorShape: {
-                if (handlePos === 0 || handlePos === 4) return Qt.SizeFDiagCursor
-                if (handlePos === 2 || handlePos === 6) return Qt.SizeBDiagCursor
-                if (handlePos === 1 || handlePos === 5) return Qt.SizeVerCursor
+                if (handlePos === 0 || handlePos === 4)
+                    return Qt.SizeFDiagCursor
+                if (handlePos === 2 || handlePos === 6)
+                    return Qt.SizeBDiagCursor
+                if (handlePos === 1 || handlePos === 5)
+                    return Qt.SizeVerCursor
                 return Qt.SizeHorCursor
             }
 
-            property real sW; property real sH
-            property real sX; property real sY
-            property real sMX; property real sMY
+            property real startWidth
+            property real startHeight
+            property real startX
+            property real startY
+            property real startMouseX
+            property real startMouseY
 
-            onPressed: (mouse) => {
-                sW = root.width; sH = root.height
-                sX = root.x; sY = root.y
-                sMX = mouse.x; sMY = mouse.y
+            onPressed: function(mouse) {
+                startWidth = root.width
+                startHeight = root.height
+                startX = root.x
+                startY = root.y
+                startMouseX = mouse.x
+                startMouseY = mouse.y
                 root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
             }
 
-            onPositionChanged: (mouse) => {
-                let dx = mouse.x - sMX
-                let dy = mouse.y - sMY
+            onPositionChanged: function(mouse) {
+                const dx = mouse.x - startMouseX
+                const dy = mouse.y - startMouseY
 
-                // Logic Resize chuẩn xác cho cả 8 hướng
-                if (handlePos <= 2) { // Top side
-                    let newH = Math.max(20, sH - dy)
-                    root.y = sY + (sH - newH)
-                    root.height = newH
+                if (handlePos <= 2) {
+                    const newHeight = Math.max(20, startHeight - dy)
+                    root.y = startY + (startHeight - newHeight)
+                    root.height = newHeight
                 }
-                if (handlePos >= 4 && handlePos <= 6) { // Bottom side
-                    root.height = Math.max(20, sH + dy)
+                if (handlePos >= 4 && handlePos <= 6) {
+                    root.height = Math.max(20, startHeight + dy)
                 }
-                if (handlePos === 0 || handlePos === 7 || handlePos === 6) { // Left side
-                    let newW = Math.max(20, sW - dx)
-                    root.x = sX + (sW - newW)
-                    root.width = newW
+                if (handlePos === 0 || handlePos === 7 || handlePos === 6) {
+                    const newWidth = Math.max(20, startWidth - dx)
+                    root.x = startX + (startWidth - newWidth)
+                    root.width = newWidth
                 }
-                if (handlePos >= 2 && handlePos <= 4) { // Right side
-                    root.width = Math.max(20, sW + dx)
+                if (handlePos >= 2 && handlePos <= 4) {
+                    root.width = Math.max(20, startWidth + dx)
                 }
             }
+
             onReleased: root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
         }
     }
 
-    // Đặt 8 điểm điều khiển vào các góc và trung điểm cạnh
     ResizeHandle {
         handlePos: 0
         anchors.left: parent.left
@@ -164,12 +137,14 @@ Item {
         anchors.leftMargin: -width / 2
         anchors.topMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 1
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 2
         anchors.right: parent.right
@@ -177,12 +152,14 @@ Item {
         anchors.rightMargin: -width / 2
         anchors.topMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 3
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         anchors.rightMargin: -width / 2
     }
+
     ResizeHandle {
         handlePos: 4
         anchors.right: parent.right
@@ -190,12 +167,14 @@ Item {
         anchors.rightMargin: -width / 2
         anchors.bottomMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 5
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 6
         anchors.left: parent.left
@@ -203,6 +182,7 @@ Item {
         anchors.leftMargin: -width / 2
         anchors.bottomMargin: -height / 2
     }
+
     ResizeHandle {
         handlePos: 7
         anchors.left: parent.left

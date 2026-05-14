@@ -29,6 +29,7 @@ QVariant WidgetPaletteModel::data(const QModelIndex& index, int role) const
     case TypeIdRole: return d.typeId;
     case DisplayNameRole: return d.displayName;
     case IconSourceRole: return d.iconSource;
+    case ComponentSourceRole: return d.componentSource;
     case CategoryRole: return int(d.category);
     case DescriptionRole: return d.defaultProperties.value("description", QString()).toString();
     default: return {};
@@ -41,6 +42,7 @@ QHash<int, QByteArray> WidgetPaletteModel::roleNames() const
     roles[TypeIdRole] = "typeId";
     roles[DisplayNameRole] = "displayName";
     roles[IconSourceRole] = "iconSource";
+    roles[ComponentSourceRole] = "componentSource";
     roles[CategoryRole] = "category";
     roles[DescriptionRole] = "description";
     return roles;
@@ -59,6 +61,7 @@ QVariantMap WidgetPaletteModel::get(int index) const
     result.insert("typeId", d.typeId);
     result.insert("displayName", d.displayName);
     result.insert("iconSource", d.iconSource);
+    result.insert("componentSource", d.componentSource);
     result.insert("category", int(d.category));
     result.insert("description", d.defaultProperties.value("description", QString()).toString());
     return result;

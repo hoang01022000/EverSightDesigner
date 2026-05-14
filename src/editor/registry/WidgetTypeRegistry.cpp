@@ -2,6 +2,196 @@
 
 namespace eversight {
 
+static QVariantMap propertyDefinition(
+    const QString& key,
+    const QString& label,
+    const QString& editor,
+    const QVariantList& options = {})
+{
+    QVariantMap definition;
+    definition.insert("key", key);
+    definition.insert("label", label);
+    definition.insert("editor", editor);
+    if (!options.isEmpty())
+        definition.insert("options", options);
+    return definition;
+}
+
+static QVariantList widgetPropertyDefinitions(const QString& typeId)
+{
+    if (typeId == "Image" || typeId == "MultipleImages") {
+        return {
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("graphicalConfiguration", "Graphical Configuration", "text"),
+            propertyDefinition("overlay1", "Overlay 1", "text"),
+            propertyDefinition("overlay2", "Overlay 2", "text"),
+            propertyDefinition("overlay3", "Overlay 3", "text"),
+            propertyDefinition("keepLastResult", "Keep Last Result", "bool"),
+            propertyDefinition("showStatusBar", "Show Status Bar", "bool"),
+            propertyDefinition("showToolsBar", "Show Tools Bar", "bool"),
+            propertyDefinition("displayAuxiliaryLine", "Display Auxiliary Line", "bool"),
+            propertyDefinition("historicalImages", "Historical Images", "bool")
+        };
+    }
+    if (typeId == "RunControl") {
+        return {
+            propertyDefinition("dataSource", "Data Source", "choice", {"Flow", "AllProcess"}),
+            propertyDefinition("controlType", "Control Type", "choice", {"Once", "Continuously", "Both"}),
+            propertyDefinition("iconColor", "Icon Color", "color")
+        };
+    }
+    if (typeId == "RunStatus") {
+        return {
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("freeBackgroundColor", "Free Background", "color"),
+            propertyDefinition("freeForegroundColor", "Free Foreground", "color"),
+            propertyDefinition("busyBackgroundColor", "Busy Background", "color"),
+            propertyDefinition("busyForegroundColor", "Busy Foreground", "color"),
+            propertyDefinition("filletRadius", "Fillet Radius", "int")
+        };
+    }
+    if (typeId == "OKNG") {
+        return {
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("okContent", "OK Content", "text"),
+            propertyDefinition("ngContent", "NG Content", "text"),
+            propertyDefinition("okColor", "OK Color", "color"),
+            propertyDefinition("ngColor", "NG Color", "color"),
+            propertyDefinition("font", "Font", "text"),
+            propertyDefinition("background", "Background", "color"),
+            propertyDefinition("border", "Border", "color")
+        };
+    }
+    if (typeId == "Textbox") {
+        return {
+            propertyDefinition("dataType", "Data Type", "choice", {"String", "Int", "Float"}),
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("formatString", "Format String", "choice", {"%s", "%d", "%f"}),
+            propertyDefinition("text", "Custom Text", "text")
+        };
+    }
+    if (typeId == "Button") {
+        return {
+            propertyDefinition("triggerCommands", "Trigger Commands", "text"),
+            propertyDefinition("imageData", "ImageData", "text"),
+            propertyDefinition("stretchMode", "Stretch Mode", "choice", {"None", "Fill", "Uniform", "UniformToFill"}),
+            propertyDefinition("clickColor", "Click Color", "color")
+        };
+    }
+    if (typeId == "SwitchControl") {
+        return {
+            propertyDefinition("dataSource", "Data Source (Bool)", "text")
+        };
+    }
+    if (typeId == "ParamsSettings") {
+        return {
+            propertyDefinition("parameterType", "Parameter Type", "choice", {"Int", "Float"}),
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("paramName", "Param Name", "text"),
+            propertyDefinition("decimalPlaces", "Decimal Places", "int")
+        };
+    }
+    if (typeId == "TrafficLight") {
+        return {
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("trafficLightContent", "Traffic Light Content", "text")
+        };
+    }
+    if (typeId == "ConditionalLight") {
+        return {
+            propertyDefinition("parameterType", "Parameter Type", "choice", {"Int", "Float"}),
+            propertyDefinition("dataSource", "Data Source", "text"),
+            propertyDefinition("gtThreshold", "> Threshold", "real"),
+            propertyDefinition("ltThreshold", "< Threshold", "real"),
+            propertyDefinition("gtThresholdColor", "> Color", "color"),
+            propertyDefinition("ltThresholdColor", "< Color", "color"),
+            propertyDefinition("defaultColor", "Default Color", "color")
+        };
+    }
+    if (typeId == "GroupBox") {
+        return {
+            propertyDefinition("groupTitle", "Title", "text"),
+            propertyDefinition("headerBackground", "Header Background", "color")
+        };
+    }
+    if (typeId == "ChildInterface") {
+        return {
+            propertyDefinition("subinterface", "Edit Subinterface", "text"),
+            propertyDefinition("passwordEnabled", "Password", "bool"),
+            propertyDefinition("displayIcon", "Display Icon", "bool")
+        };
+    }
+    if (typeId == "TabControl") {
+        return {
+            propertyDefinition("tabPageQuantity", "Tab Page Quantity", "int"),
+            propertyDefinition("selectBackground", "Select Background", "color"),
+            propertyDefinition("align", "Align", "choice", {"Left", "Center", "Right"}),
+            propertyDefinition("tabPageNames", "Tab Page Names", "text")
+        };
+    }
+    if (typeId == "Table") {
+        return {
+            propertyDefinition("rows", "Rows", "int"),
+            propertyDefinition("columns", "Columns", "int"),
+            propertyDefinition("columnConfig", "Column Config", "text"),
+            propertyDefinition("lineTitle", "Line Title", "text"),
+            propertyDefinition("colorEdit", "Color Edit", "color")
+        };
+    }
+    if (typeId == "LineDiagramArray" || typeId == "MultiLineDiagram") {
+        return {
+            propertyDefinition("dataSourceList", "Data Source List", "text"),
+            propertyDefinition("upperLimit", "Upper Limit", "real"),
+            propertyDefinition("lowerLimit", "Lower Limit", "real"),
+            propertyDefinition("latestRunTimes", "Latest Runtime Data", "int")
+        };
+    }
+    if (typeId == "ProductionStatistics") {
+        return {
+            propertyDefinition("dataSourceList", "Data Source List", "text"),
+            propertyDefinition("showCurrent", "Show Current", "bool"),
+            propertyDefinition("showMax", "Show Max", "bool"),
+            propertyDefinition("showMin", "Show Min", "bool"),
+            propertyDefinition("showAverage", "Show Avg", "bool"),
+            propertyDefinition("showRange", "Show Range", "bool"),
+            propertyDefinition("showStdDev", "Show Std Dev", "bool")
+        };
+    }
+    if (typeId == "PieControl") {
+        return {
+            propertyDefinition("dataSourceList", "Data Source List", "text"),
+            propertyDefinition("defaultColors", "Default Colors", "text")
+        };
+    }
+    if (typeId == "ParamSettingsArray" || typeId == "LabelArray") {
+        return {
+            propertyDefinition("dataSourceList", "Data Source List", "text"),
+            propertyDefinition("orientation", "Orientation", "choice", {"Horizontal", "Vertical"}),
+            propertyDefinition("spacing", "Spacing", "int")
+        };
+    }
+    if (typeId == "StaticImage") {
+        return {
+            propertyDefinition("imageData", "ImageData", "text"),
+            propertyDefinition("stretchMode", "Stretch Mode", "choice", {"None", "Fill", "Uniform", "UniformToFill"})
+        };
+    }
+    if (typeId == "WorldClock") {
+        return {
+            propertyDefinition("format", "Time Format", "text"),
+            propertyDefinition("timeZone", "Time Zone", "text")
+        };
+    }
+    if (typeId == "Log") {
+        return {
+            propertyDefinition("displayTitleBar", "Display TitleBar", "bool"),
+            propertyDefinition("logColorSystem", "Log Color System", "text")
+        };
+    }
+
+    return {};
+}
+
 static WidgetTypeDescriptor make(
     const QString& typeId, const QString& displayName, const QString& iconText,
     WidgetCategory category, qreal w, qreal h,
@@ -89,6 +279,26 @@ WidgetTypeRegistry::WidgetTypeRegistry()
         else if (t == "ParamSettingsArray") d.iconSource = "assets/icons/Param Settings Array.png";
         else if (t == "LabelArray") d.iconSource = "assets/icons/Label Array.png";
         else d.iconSource = "assets/icons/Image.png";
+
+        d.componentSource = "widgets/PlaceholderWidget.qml";
+        if (t == "Image" || t == "MultipleImages")
+            d.componentSource = "widgets/Foundation/ImageWidget.qml";
+        else if (t == "RunControl")
+            d.componentSource = "widgets/Foundation/RunControlWidget.qml";
+        else if (t == "RunStatus")
+            d.componentSource = "widgets/Foundation/RunStatusWidget.qml";
+        else if (t == "OKNG")
+            d.componentSource = "widgets/Foundation/OKNGWidget.qml";
+        else if (t == "Textbox")
+            d.componentSource = "widgets/Foundation/TextboxWidget.qml";
+        else if (t == "Button" || t == "SwitchControl")
+            d.componentSource = "widgets/Foundation/ButtonWidget.qml";
+        else if (t == "TrafficLight")
+            d.componentSource = "widgets/Foundation/TrafficLightWidget.qml";
+        else if (t == "Table")
+            d.componentSource = "widgets/Chart/TableWidget.qml";
+
+        d.propertyDefinitions = widgetPropertyDefinitions(t);
     }
 }
 
