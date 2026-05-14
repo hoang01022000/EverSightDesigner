@@ -1,8 +1,10 @@
 import QtQuick
+import QtQuick.Controls
 
-Rectangle {
+Item {
     id: root
 
+    // --- Properties kết nối với Model/Logic ---
     property int widgetId: -1
     property string widgetType: "Widget"
     property string widgetTitle: "Widget"
@@ -11,421 +13,155 @@ Rectangle {
     property string iconColor: "#f6f6f6"
     property bool selected: false
 
+    // --- Signals ---
     signal selectedRequested(int id)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
 
-    width: 104
-    height: 50
-    radius: 0
-    color: root.buttonColor
-    border.color: root.selected ? "#1e9bff" : root.borderColorValue
-    border.width: root.selected ? 2 : 1
+    // --- Logic tự động tìm Widget theo thư mục ---
+    function getWidgetSource(type) {
+        // Các typeId đầy đủ theo Widget Configuration Reference
+        const foundationList = ["Image", "MultipleImages", "RunControl", "RunStatus", "OKNG", "Textbox", "Button", "SwitchControl", "ParamsSettings", "VariableSettings", "CharacterSettings", "TrafficLight", "ConditionalLight"];
+        const layoutList = ["GroupBox", "ChildInterface", "TabControl"];
+        const chartList = ["Table", "LineDiagramArray", "MultiLineDiagram", "ProductionStatistics", "PieControl", "ParamSettingsArray", "LabelArray"];
 
-    function displayText() {
-        if (root.widgetType === "RunControl")
-            return "RUN"
-        if (root.widgetType === "Indicator")
-            return "OK"
-        if (root.widgetType === "TrafficLight")
-            return "●  ●"
-        if (root.widgetType === "TextInput")
-            return root.widgetTitle
-        if (root.widgetType === "TrendChart")
-            return "LINE"
-        if (root.widgetType === "DataTable")
-            return "TABLE"
-        if (root.widgetType === "CameraView")
-            return "IMG"
-        if (root.widgetType === "Button")
-            return "BTN"
-        if (root.widgetType === "Toggle")
-            return "SW"
-        if (root.widgetType === "Label")
-            return root.widgetTitle
-        if (root.widgetType === "GroupBox")
-            return root.widgetTitle
-        return root.widgetTitle
-    }
+        var subFolder = "Foundation";
+        var fileName = type;
 
-    Text {
-        anchors.centerIn: parent
-        text: root.displayText()
-        color: root.iconColor
-        font.pixelSize: Math.max(11, Math.min(26, root.height * 0.42))
-        font.bold: true
-        elide: Text.ElideRight
-        width: parent.width - 12
-        horizontalAlignment: Text.AlignHCenter
-    }
+        if (layoutList.indexOf(type) !== -1) {
+            subFolder = "Layout";
+        } else if (chartList.indexOf(type) !== -1) {
+            subFolder = "Chart";
+        } else if (foundationList.indexOf(type) === -1) {
+            return "widgets/PlaceholderWidget.qml";
+        }
 
-    Repeater {
-        model: root.selected ? 8 : 0
+        // Những ánh xạ tên file đặc thù (nếu file QML vật lý khác tên typeId)
+        if (type === "MultipleImages") fileName = "Image";
+        if (type === "SwitchControl") fileName = "Button";
+        if (type === "DataTable") fileName = "Table";
 
-        delegate: Rectangle {
-            width: 7
-            height: 7
-            radius: 1
-            color: "#6bb8ff"
-            border.color: "#ffffff"
+        var candidate = "widgets/" + subFolder + "/" + fileName + "Widget.qml";
 
-            x: index % 3 === 0 ? -4 : (index % 3 === 1 ? root.width / 2 - 3 : root.width - 3)
-            y: index < 3 ? -4 : (index < 5 ? root.height / 2 - 3 : root.height - 3)
+        // Nếu file QML cụ thể chưa tồn tại, trả về PlaceholderWidget.qml
+        try {
+            var comp = Qt.createComponent(candidate);
+            if (comp.status === Component.Ready) return candidate;
+            return "widgets/PlaceholderWidget.qml";
+        } catch (e) {
+            return "widgets/PlaceholderWidget.qml";
         }
     }
 
+    // --- Khung hiển thị khi được chọn ---
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: root.selected ? "#1e9bff" : "transparent"
+        border.width: root.selected ? 2 : 0
+        z: 1
+    }
+
+    // --- Nội dung Widget hiển thị ---
+    Loader {
+        id: widgetLoader
+        anchors.fill: parent
+        anchors.margins: root.selected ? 2 : 0
+        source: getWidgetSource(root.widgetType)
+
+        onLoaded: {
+            if (!item) return
+            // Ràng buộc dữ liệu từ Node xuống Widget con (Appearance settings)
+            item.bgColor = Qt.binding(() => root.buttonColor)
+            item.borderColor = Qt.binding(() => root.borderColorValue)
+            item.fontColor = Qt.binding(() => root.iconColor)
+
+            // Kiểm tra thuộc tính tồn tại trước khi bind để tránh lỗi log
+            if (item.hasOwnProperty("labelText")) item.labelText = Qt.binding(() => root.widgetTitle)
+            if (item.hasOwnProperty("showText")) item.showText = Qt.binding(() => root.widgetTitle)
+        }
+    }
+
+    // --- MouseArea chính để Di chuyển (Drag) ---
     MouseArea {
         anchors.fill: parent
         drag.target: root
+        drag.threshold: 8
 
         onPressed: {
-            root.z = 999
+            root.z = 999 // Đưa lên trên cùng khi đang thao tác
             root.selectedRequested(root.widgetId)
         }
-
-        onClicked: root.selectedRequested(root.widgetId)
-
         onReleased: {
+            root.z = 1
             root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
         }
     }
 
-    Rectangle {
-        id: resizeHandleTopLeft
-        width: 14
-        height: 14
+    // --- RE-SIZE HANDLES (Gồm 8 điểm điều hướng) ---
+    // Component con dùng chung cho các góc và cạnh
+    component ResizeHandle: Rectangle {
+        property int handlePos: 0 // 0:TL, 1:T, 2:TR, 3:R, 4:BR, 5:B, 6:BL, 7:L
+        width: 10; height: 10
+        color: "#ffffff"
+        border.color: "#1e9bff"
+        border.width: 1
         visible: root.selected
-        color: "#ff8a00"
-        anchors.left: parent.left
-        anchors.top: parent.top
-        z: 10
+        z: 1000
 
         MouseArea {
             anchors.fill: parent
-            cursorShape: Qt.SizeFDiagCursor
+            anchors.margins: -5 // Tăng diện tích nhận diện chuột
+            cursorShape: {
+                if (handlePos === 0 || handlePos === 4) return Qt.SizeFDiagCursor
+                if (handlePos === 2 || handlePos === 6) return Qt.SizeBDiagCursor
+                if (handlePos === 1 || handlePos === 5) return Qt.SizeVerCursor
+                return Qt.SizeHorCursor
+            }
 
-            property real startWidth: 0
-            property real startHeight: 0
-            property real startX: 0
-            property real startY: 0
-            property real startMouseX: 0
-            property real startMouseY: 0
+            property real sW; property real sH
+            property real sX; property real sY
+            property real sMX; property real sMY
 
-            onPressed: function(mouse) {
+            onPressed: (mouse) => {
+                sW = root.width; sH = root.height
+                sX = root.x; sY = root.y
+                sMX = mouse.x; sMY = mouse.y
                 root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startHeight = root.height
-                startX = root.x
-                startY = root.y
-                startMouseX = mouse.x
-                startMouseY = mouse.y
             }
 
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
+            onPositionChanged: (mouse) => {
+                let dx = mouse.x - sMX
+                let dy = mouse.y - sMY
 
-                var dx = mouse.x - startMouseX
-                var dy = mouse.y - startMouseY
-                var newWidth = Math.max(32, startWidth - dx)
-                var newHeight = Math.max(24, startHeight - dy)
-                root.width = newWidth
-                root.height = newHeight
-                root.x = startX + (startWidth - newWidth)
-                root.y = startY + (startHeight - newHeight)
+                // Logic Resize chuẩn xác cho cả 8 hướng
+                if (handlePos <= 2) { // Top side
+                    let newH = Math.max(20, sH - dy)
+                    root.y = sY + (sH - newH)
+                    root.height = newH
+                }
+                if (handlePos >= 4 && handlePos <= 6) { // Bottom side
+                    root.height = Math.max(20, sH + dy)
+                }
+                if (handlePos === 0 || handlePos === 7 || handlePos === 6) { // Left side
+                    let newW = Math.max(20, sW - dx)
+                    root.x = sX + (sW - newW)
+                    root.width = newW
+                }
+                if (handlePos >= 2 && handlePos <= 4) { // Right side
+                    root.width = Math.max(20, sW + dx)
+                }
             }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
+            onReleased: root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
         }
     }
 
-    Rectangle {
-        id: resizeHandleTop
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeVerCursor
-
-            property real startHeight: 0
-            property real startY: 0
-            property real startMouseY: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startHeight = root.height
-                startY = root.y
-                startMouseY = mouse.y
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                var dy = mouse.y - startMouseY
-                var newHeight = Math.max(24, startHeight - dy)
-                root.height = newHeight
-                root.y = startY + (startHeight - newHeight)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleTopRight
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.right: parent.right
-        anchors.top: parent.top
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeBDiagCursor
-
-            property real startWidth: 0
-            property real startHeight: 0
-            property real startY: 0
-            property real startMouseX: 0
-            property real startMouseY: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startHeight = root.height
-                startY = root.y
-                startMouseX = mouse.x
-                startMouseY = mouse.y
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                var dx = mouse.x - startMouseX
-                var dy = mouse.y - startMouseY
-                root.width = Math.max(32, startWidth + dx)
-                var newHeight = Math.max(24, startHeight - dy)
-                root.height = newHeight
-                root.y = startY + (startHeight - newHeight)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleRight
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeHorCursor
-
-            property real startWidth: 0
-            property real startMouseX: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startMouseX = mouse.x
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                root.width = Math.max(32, startWidth + mouse.x - startMouseX)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleBottomRight
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeFDiagCursor
-
-            property real startWidth: 0
-            property real startHeight: 0
-            property real startMouseX: 0
-            property real startMouseY: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startHeight = root.height
-                startMouseX = mouse.x
-                startMouseY = mouse.y
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                root.width = Math.max(32, startWidth + mouse.x - startMouseX)
-                root.height = Math.max(24, startHeight + mouse.y - startMouseY)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleBottom
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeVerCursor
-
-            property real startHeight: 0
-            property real startMouseY: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startHeight = root.height
-                startMouseY = mouse.y
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                root.height = Math.max(24, startHeight + mouse.y - startMouseY)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleBottomLeft
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeBDiagCursor
-
-            property real startWidth: 0
-            property real startHeight: 0
-            property real startX: 0
-            property real startMouseX: 0
-            property real startMouseY: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startHeight = root.height
-                startX = root.x
-                startMouseX = mouse.x
-                startMouseY = mouse.y
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                var dx = mouse.x - startMouseX
-                var dy = mouse.y - startMouseY
-                var newWidth = Math.max(32, startWidth - dx)
-                root.width = newWidth
-                root.height = Math.max(24, startHeight + dy)
-                root.x = startX + (startWidth - newWidth)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
-
-    Rectangle {
-        id: resizeHandleLeft
-        width: 14
-        height: 14
-        visible: root.selected
-        color: "#ff8a00"
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        z: 10
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.SizeHorCursor
-
-            property real startWidth: 0
-            property real startX: 0
-            property real startMouseX: 0
-
-            onPressed: function(mouse) {
-                root.selectedRequested(root.widgetId)
-                startWidth = root.width
-                startX = root.x
-                startMouseX = mouse.x
-            }
-
-            onPositionChanged: function(mouse) {
-                if (!pressed)
-                    return
-
-                var dx = mouse.x - startMouseX
-                var newWidth = Math.max(32, startWidth - dx)
-                root.width = newWidth
-                root.x = startX + (startWidth - newWidth)
-            }
-
-            onReleased: {
-                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
-            }
-        }
-    }
+    // Đặt 8 điểm điều khiển vào các góc và trung điểm cạnh
+    ResizeHandle { handlePos: 0; anchors.centerIn: parent.topLeft }
+    ResizeHandle { handlePos: 1; anchors.centerIn: parent.top }
+    ResizeHandle { handlePos: 2; anchors.centerIn: parent.topRight }
+    ResizeHandle { handlePos: 3; anchors.centerIn: parent.right }
+    ResizeHandle { handlePos: 4; anchors.centerIn: parent.bottomRight }
+    ResizeHandle { handlePos: 5; anchors.centerIn: parent.bottom }
+    ResizeHandle { handlePos: 6; anchors.centerIn: parent.bottomLeft }
+    ResizeHandle { handlePos: 7; anchors.centerIn: parent.left }
 }

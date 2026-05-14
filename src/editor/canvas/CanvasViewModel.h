@@ -2,49 +2,55 @@
 
 #include <QAbstractListModel>
 #include "../../shared/models/WidgetItem.h"
+#include "../../shared/models/ScreenModel.h"
+#include "../../shared/models/CanvasTabModel.h"
+#include "../../shared/models/FixedBarState.h"
+
+    Q_PROPERTY(bool topFixedVisible READ isTopFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool bottomFixedVisible READ isBottomFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool leftFixedVisible READ isLeftFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool rightFixedVisible READ isRightFixedVisible NOTIFY fixedBarChanged)
+
+    Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabChanged)
+    Q_PROPERTY(int tabCount READ tabCount NOTIFY tabsChanged)
 
 class CanvasViewModel : public QAbstractListModel
 {
     Q_OBJECT
-    Q_PROPERTY(int selectedWidgetId READ selectedWidgetId NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedWidgetType READ selectedWidgetType NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedWidgetTitle READ selectedWidgetTitle NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(qreal selectedWidgetX READ selectedWidgetX NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(qreal selectedWidgetY READ selectedWidgetY NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(qreal selectedWidgetWidth READ selectedWidgetWidth NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(qreal selectedWidgetHeight READ selectedWidgetHeight NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedDataSource READ selectedDataSource NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedControlType READ selectedControlType NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedButtonColor READ selectedButtonColor NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedBorderColor READ selectedBorderColor NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(QString selectedIconColor READ selectedIconColor NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(bool selectedAutoFill READ selectedAutoFill NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(bool hasSelection READ hasSelection NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(int widgetCount READ widgetCount NOTIFY widgetCountChanged)
+
+    Q_PROPERTY(int     selectedWidgetId     READ selectedWidgetId     NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedWidgetType   READ selectedWidgetType   NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedWidgetTitle  READ selectedWidgetTitle  NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(qreal   selectedWidgetX      READ selectedWidgetX      NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(qreal   selectedWidgetY      READ selectedWidgetY      NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(qreal   selectedWidgetWidth  READ selectedWidgetWidth  NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(qreal   selectedWidgetHeight READ selectedWidgetHeight NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedDataSource   READ selectedDataSource   NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedControlType  READ selectedControlType  NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedButtonColor  READ selectedButtonColor  NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedBorderColor  READ selectedBorderColor  NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QString selectedIconColor    READ selectedIconColor    NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(bool    selectedAutoFill     READ selectedAutoFill     NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(bool    hasSelection         READ hasSelection         NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(int     widgetCount          READ widgetCount          NOTIFY widgetCountChanged)
+    Q_PROPERTY(int     currentBasicLayout   READ currentBasicLayout   NOTIFY layoutChanged)
+    Q_PROPERTY(int     currentSplitTemplate READ currentSplitTemplate NOTIFY layoutChanged)
+    Q_PROPERTY(bool    currentShowGrid      READ currentShowGrid      NOTIFY layoutChanged)
+    Q_PROPERTY(QString currentGridLineColor READ currentGridLineColor NOTIFY layoutChanged)
+    Q_PROPERTY(QString currentBackgroundColor READ currentBackgroundColor NOTIFY layoutChanged)
 
 public:
     explicit CanvasViewModel(QObject* parent = nullptr);
 
     enum Roles {
         IdRole = Qt::UserRole + 1,
-        TypeRole,
-        XRole,
-        YRole,
-        WidthRole,
-        HeightRole,
-        TitleRole,
-        DataSourceRole,
-        ControlTypeRole,
-        ButtonColorRole,
-        BorderColorRole,
-        IconColorRole,
-        AutoFillRole
+        TypeRole, XRole, YRole, WidthRole, HeightRole,
+        TitleRole, DataSourceRole, ControlTypeRole,
+        ButtonColorRole, BorderColorRole, IconColorRole, AutoFillRole
     };
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-
+    int      rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
-
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void addWidget(const QString& type);
@@ -61,38 +67,74 @@ public:
     Q_INVOKABLE void updateSelectedData(const QString& dataSource, const QString& controlType);
     Q_INVOKABLE void updateSelectedAppearance(const QString& buttonColor, const QString& borderColor, const QString& iconColor);
     Q_INVOKABLE void updateSelectedAutoFill(bool autoFill);
+    Q_INVOKABLE void bringSelectedToFront();
+    Q_INVOKABLE void bringSelectedForward();
+    Q_INVOKABLE void sendSelectedToBack();
+    Q_INVOKABLE void sendSelectedBackward();
+    Q_INVOKABLE void distributeSelectedHorizontal();
+    Q_INVOKABLE void distributeSelectedVertical();
+    Q_INVOKABLE void undo();
+    Q_INVOKABLE void redo();
+    Q_INVOKABLE void fitToWindow();
     Q_INVOKABLE void clear();
     Q_INVOKABLE bool saveToFile(const QString& filePath) const;
     Q_INVOKABLE bool loadFromFile(const QString& filePath);
 
-    int selectedWidgetId() const;
-    QString selectedWidgetType() const;
-    QString selectedWidgetTitle() const;
-    qreal selectedWidgetX() const;
-    qreal selectedWidgetY() const;
-    qreal selectedWidgetWidth() const;
-    qreal selectedWidgetHeight() const;
-    QString selectedDataSource() const;
-    QString selectedControlType() const;
-    QString selectedButtonColor() const;
-    QString selectedBorderColor() const;
-    QString selectedIconColor() const;
-    bool selectedAutoFill() const;
-    bool hasSelection() const;
-    int widgetCount() const;
+    // Tab and fixed bar management (MVVM API)
+    Q_INVOKABLE void addTab();
+    Q_INVOKABLE void removeTab(int index);
+    Q_INVOKABLE void renameTab(int index, const QString& title);
+    Q_INVOKABLE void setActiveTab(int index);
+    Q_INVOKABLE int  activeTabIndex() const;
+    Q_INVOKABLE int  tabCount() const;
+
+    Q_INVOKABLE void setFixedBar(const QString& bar, bool visible);
+    Q_INVOKABLE bool isTopFixedVisible() const;
+    Q_INVOKABLE bool isBottomFixedVisible() const;
+    Q_INVOKABLE bool isLeftFixedVisible() const;
+    Q_INVOKABLE bool isRightFixedVisible() const;
+    Q_INVOKABLE void setBasicLayout(int basicLayout);
+    Q_INVOKABLE void setSplitTemplate(int tmpl);
+    Q_INVOKABLE int  currentBasicLayout() const;
+    Q_INVOKABLE int  currentSplitTemplate() const;
+    Q_INVOKABLE bool currentShowGrid() const;
+    Q_INVOKABLE QString currentGridLineColor() const;
+    Q_INVOKABLE QString currentBackgroundColor() const;
+
+    int     selectedWidgetId()     const;
+    QString selectedWidgetType()   const;
+    QString selectedWidgetTitle()  const;
+    qreal   selectedWidgetX()      const;
+    qreal   selectedWidgetY()      const;
+    qreal   selectedWidgetWidth()  const;
+    qreal   selectedWidgetHeight() const;
+    QString selectedDataSource()   const;
+    QString selectedControlType()  const;
+    QString selectedButtonColor()  const;
+    QString selectedBorderColor()  const;
+    QString selectedIconColor()    const;
+    bool    selectedAutoFill()     const;
+    bool    hasSelection()         const;
+    int     widgetCount()          const;
 
 signals:
     void selectedWidgetChanged();
     void widgetCountChanged();
+    void fixedBarChanged();
+    void tabsChanged();
+    void activeTabChanged();
+    void layoutChanged();
 
 private:
-    QList<WidgetItem> m_widgets;
-
-    int m_nextId = 1;
-    int m_selectedWidgetId = -1;
-
-    WidgetItem createWidget(const QString& type) const;
-
-    int indexOfWidget(int id) const;
+    WidgetItem        createWidget(const QString& type) const;
+    int               indexOfWidget(int id) const;
     const WidgetItem* selectedWidget() const;
+
+    QList<WidgetItem> m_widgets;
+    int               m_nextId           = 1;
+    int               m_selectedWidgetId = -1;
+    eversight::ScreenModel m_screen;
+    QList<eversight::CanvasTabModel> m_tabs;
+    int m_activeTab = 0;
+    eversight::FixedBarState m_fixedBars;
 };

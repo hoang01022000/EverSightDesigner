@@ -7,7 +7,7 @@ Item {
     property string widgetName: "Image"
     property string widgetType: "CameraView"
     property string description: "Runtime control"
-    property string iconText: "UI"
+    property string iconSource: "assets/icons/Image.png"
 
     signal itemClicked(string type)
 
@@ -28,25 +28,13 @@ Item {
         width: 38
         height: 28
         radius: 4
-        color: "#737980"
+        color: "transparent"
 
-        Rectangle {
-            width: 7
-            height: 7
-            radius: 2
-            color: "#ff8a00"
-            anchors.right: parent.right
-            anchors.rightMargin: -2
-            anchors.top: parent.top
-            anchors.topMargin: 2
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: root.iconText
-            color: "#ffffff"
-            font.pixelSize: root.iconText.length > 2 ? 8 : 13
-            font.bold: true
+        Image {
+            anchors.fill: parent
+            source: root.iconSource
+            fillMode: Image.PreserveAspectFit
+            smooth: true
         }
     }
 

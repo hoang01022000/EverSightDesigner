@@ -1,211 +1,190 @@
 #include "CanvasViewModel.h"
+#include "../../editor/registry/WidgetTypeRegistry.h"
+#include "../../shared/models/ScreenModel.h"
+#include "../../shared/models/CanvasTabModel.h"
+#include "../../shared/models/FixedBarState.h"
 
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 
+using namespace eversight;
+
 CanvasViewModel::CanvasViewModel(QObject* parent)
-    : QAbstractListModel(parent)
+    : QAbstractListModel(parent) {}
+
+// Tab and fixed-bar implementations
+void CanvasViewModel::addTab()
 {
+    CanvasTabModel t;
+    t.id = m_tabs.size() + 1;
+    t.title = QString("Tab %1").arg(t.id);
+    beginResetModel();
+    m_tabs.append(t);
+    endResetModel();
+    emit tabsChanged();
+}
+
+void CanvasViewModel::removeTab(int index)
+{
+    if (index < 0 || index >= m_tabs.size()) return;
+    beginResetModel();
+    m_tabs.removeAt(index);
+    if (m_activeTab >= m_tabs.size()) m_activeTab = qMax(0, m_tabs.size() - 1);
+    endResetModel();
+    emit tabsChanged();
+    emit activeTabChanged();
+}
+
+void CanvasViewModel::renameTab(int index, const QString& title)
+{
+    if (index < 0 || index >= m_tabs.size()) return;
+    m_tabs[index].title = title;
+    emit tabsChanged();
+}
+
+void CanvasViewModel::setActiveTab(int index)
+{
+    if (index < 0 || index >= m_tabs.size()) return;
+    if (m_activeTab == index) return;
+    m_activeTab = index;
+    emit activeTabChanged();
+}
+
+int CanvasViewModel::activeTabIndex() const { return m_activeTab; }
+int CanvasViewModel::tabCount() const { return m_tabs.size(); }
+
+void CanvasViewModel::setFixedBar(const QString& bar, bool visible)
+{
+    const QString b = bar.toLower();
+    if (b == "top") m_fixedBars.topVisible = visible;
+    else if (b == "bottom") m_fixedBars.bottomVisible = visible;
+    else if (b == "left") m_fixedBars.leftVisible = visible;
+    else if (b == "right") m_fixedBars.rightVisible = visible;
+    emit fixedBarChanged();
+}
+
+bool CanvasViewModel::isTopFixedVisible() const { return m_fixedBars.topVisible; }
+bool CanvasViewModel::isBottomFixedVisible() const { return m_fixedBars.bottomVisible; }
+bool CanvasViewModel::isLeftFixedVisible() const { return m_fixedBars.leftVisible; }
+bool CanvasViewModel::isRightFixedVisible() const { return m_fixedBars.rightVisible; }
+
+void CanvasViewModel::setBasicLayout(int basicLayout)
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return;
+    m_tabs[m_activeTab].layout.basicLayout = static_cast<eversight::CanvasLayoutModel::BasicLayout>(basicLayout);
+    emit layoutChanged();
+}
+
+void CanvasViewModel::setSplitTemplate(int tmpl)
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return;
+    m_tabs[m_activeTab].layout.splitTemplate = tmpl;
+    emit layoutChanged();
+}
+
+int CanvasViewModel::currentBasicLayout() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return eversight::CanvasLayoutModel::L1;
+    return int(m_tabs[m_activeTab].layout.basicLayout);
+}
+
+int CanvasViewModel::currentSplitTemplate() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return 0;
+    return m_tabs[m_activeTab].layout.splitTemplate;
+}
+
+bool CanvasViewModel::currentShowGrid() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return false;
+    return m_tabs[m_activeTab].layout.showGrid;
+}
+
+QString CanvasViewModel::currentGridLineColor() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return QString("#e0e0e0");
+    return m_tabs[m_activeTab].layout.gridLineColor;
+}
+
+QString CanvasViewModel::currentBackgroundColor() const
+{
+    if (m_activeTab < 0 || m_activeTab >= m_tabs.size()) return QString("#ffffff");
+    return m_tabs[m_activeTab].layout.backgroundColor;
 }
 
 int CanvasViewModel::rowCount(const QModelIndex& parent) const
 {
-    if (parent.isValid())
-        return 0;
-
+    if (parent.isValid()) return 0;
     return m_widgets.size();
 }
 
 QVariant CanvasViewModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid())
-        return {};
-
-    const WidgetItem& widget = m_widgets.at(index.row());
+    if (!index.isValid()) return {};
+    const WidgetItem& w = m_widgets.at(index.row());
 
     switch (role) {
-
-    case IdRole:
-        return widget.id;
-
-    case TypeRole:
-        return widget.type;
-
-    case XRole:
-        return widget.x;
-
-    case YRole:
-        return widget.y;
-
-    case WidthRole:
-        return widget.width;
-
-    case HeightRole:
-        return widget.height;
-
-    case TitleRole:
-        return widget.title;
-
-    case DataSourceRole:
-        return widget.dataSource;
-
-    case ControlTypeRole:
-        return widget.controlType;
-
-    case ButtonColorRole:
-        return widget.buttonColor;
-
-    case BorderColorRole:
-        return widget.borderColor;
-
-    case IconColorRole:
-        return widget.iconColor;
-
-    case AutoFillRole:
-        return widget.autoFill;
+    case IdRole:          return w.id;
+    case TypeRole:        return w.type;
+    case XRole:           return w.x;
+    case YRole:           return w.y;
+    case WidthRole:       return w.width;
+    case HeightRole:      return w.height;
+    case TitleRole:       return w.title;
+    case DataSourceRole:  return w.dataSource;
+    case ControlTypeRole: return w.controlType;
+    case ButtonColorRole: return w.buttonColor;
+    case BorderColorRole: return w.borderColor;
+    case IconColorRole:   return w.iconColor;
+    case AutoFillRole:    return w.autoFill;
     }
-
     return {};
 }
 
 QHash<int, QByteArray> CanvasViewModel::roleNames() const
 {
     return {
-        { IdRole, "widgetId" },
-        { TypeRole, "widgetType" },
-        { XRole, "widgetX" },
-        { YRole, "widgetY" },
-        { WidthRole, "widgetWidth" },
-        { HeightRole, "widgetHeight" },
-        { TitleRole, "widgetTitle" },
-        { DataSourceRole, "widgetDataSource" },
+        { IdRole,          "widgetId"          },
+        { TypeRole,        "widgetType"        },
+        { XRole,           "widgetX"           },
+        { YRole,           "widgetY"           },
+        { WidthRole,       "widgetWidth"       },
+        { HeightRole,      "widgetHeight"      },
+        { TitleRole,       "widgetTitle"       },
+        { DataSourceRole,  "widgetDataSource"  },
         { ControlTypeRole, "widgetControlType" },
         { ButtonColorRole, "widgetButtonColor" },
         { BorderColorRole, "widgetBorderColor" },
-        { IconColorRole, "widgetIconColor" },
-        { AutoFillRole, "widgetAutoFill" }
+        { IconColorRole,   "widgetIconColor"   },
+        { AutoFillRole,    "widgetAutoFill"    }
     };
 }
 
+// Factory — uses Registry for defaults
 WidgetItem CanvasViewModel::createWidget(const QString& type) const
 {
     WidgetItem item;
     item.type = type;
-    item.id = -1;
 
-    const QString formattedType = type.trimmed();
+    const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(type);
 
-    if (formattedType == "CameraView") {
-        item.width = 320;
-        item.height = 200;
-        item.title = "Camera View";
-        item.buttonColor = "#282c2f";
-        item.borderColor = "#474b50";
-        item.iconColor = "#dbe0e6";
-    } else if (formattedType == "TrendChart") {
-        item.width = 320;
-        item.height = 180;
-        item.title = "Trend Chart";
-        item.buttonColor = "#2b2f33";
-        item.borderColor = "#4f5358";
-    } else if (formattedType == "MultiTrend") {
-        item.width = 340;
-        item.height = 180;
-        item.title = "Multi Trend";
-        item.buttonColor = "#2b2f33";
-        item.borderColor = "#4f5358";
-    } else if (formattedType == "DataTable") {
-        item.width = 340;
-        item.height = 180;
-        item.title = "Data Table";
-        item.buttonColor = "#32363a";
-        item.borderColor = "#4b4f54";
-    } else if (formattedType == "RunControl") {
-        item.width = 160;
-        item.height = 72;
-        item.title = "Run Control";
-        item.buttonColor = "#1f3d60";
-        item.iconColor = "#f3f9ff";
-    } else if (formattedType == "Button") {
-        item.width = 140;
-        item.height = 56;
-        item.title = "Button";
-        item.buttonColor = "#ff8a00";
-        item.borderColor = "#ffb15c";
-    } else if (formattedType == "Toggle") {
-        item.width = 140;
-        item.height = 56;
-        item.title = "Toggle";
-        item.buttonColor = "#3d5a7f";
-        item.borderColor = "#5b7d9b";
-    } else if (formattedType == "TextInput") {
-        item.width = 220;
-        item.height = 48;
-        item.title = "Text Input";
-        item.buttonColor = "#2f3438";
-        item.borderColor = "#52585f";
-    } else if (formattedType == "Indicator") {
-        item.width = 120;
-        item.height = 72;
-        item.title = "Indicator";
-        item.buttonColor = "#1d3e24";
-        item.iconColor = "#dff0d8";
-    } else if (formattedType == "Label") {
-        item.width = 180;
-        item.height = 48;
-        item.title = "Text Label";
-        item.buttonColor = "#2f3134";
-        item.iconColor = "#f5f5f5";
-    } else if (formattedType == "TrafficLight") {
-        item.width = 100;
-        item.height = 120;
-        item.title = "Traffic Light";
-        item.buttonColor = "#212529";
-        item.borderColor = "#4e5b68";
-    } else if (formattedType == "GroupBox") {
-        item.width = 360;
-        item.height = 220;
-        item.title = "Group Box";
-        item.buttonColor = "#2d3136";
-        item.borderColor = "#5b5f65";
-    } else if (formattedType == "TabContainer") {
-        item.width = 360;
-        item.height = 220;
-        item.title = "Tab Container";
-        item.buttonColor = "#2b2f33";
-        item.borderColor = "#54595f";
-    } else if (formattedType == "ChildInterface") {
-        item.width = 360;
-        item.height = 240;
-        item.title = "Child Interface";
-        item.buttonColor = "#2d3034";
-        item.borderColor = "#4f5358";
-    } else if (formattedType == "NumericReadout") {
-        item.width = 180;
-        item.height = 80;
-        item.title = "Numeric Readout";
-        item.buttonColor = "#253141";
-        item.borderColor = "#4a5468";
-    } else if (formattedType == "ParameterSet") {
-        item.width = 220;
-        item.height = 140;
-        item.title = "Parameters";
-        item.buttonColor = "#2c3239";
-        item.borderColor = "#515960";
-    } else if (formattedType == "Condition") {
-        item.width = 180;
-        item.height = 72;
-        item.title = "Condition";
-        item.buttonColor = "#3b3222";
-        item.borderColor = "#705d35";
+    if (desc) {
+        item.title       = desc->displayName;
+        item.width       = desc->defaultWidth;
+        item.height      = desc->defaultHeight;
+        item.buttonColor = desc->defaultBackgroundColor;
+        item.borderColor = desc->defaultBorderColor;
+        item.iconColor   = desc->defaultFontColor;
+        item.properties  = desc->defaultProperties;
+
+        if (desc->defaultProperties.contains("dataSource"))
+            item.dataSource = desc->defaultProperties["dataSource"].toString();
+        if (desc->defaultProperties.contains("controlType"))
+            item.controlType = desc->defaultProperties["controlType"].toString();
     } else {
-        item.width = 160;
-        item.height = 92;
-        item.title = formattedType.isEmpty() ? "Widget" : formattedType;
-        item.buttonColor = "#2f2f2f";
-        item.borderColor = "#272727";
+        item.title = type.isEmpty() ? "Widget" : type;
     }
 
     return item;
@@ -213,50 +192,44 @@ WidgetItem CanvasViewModel::createWidget(const QString& type) const
 
 void CanvasViewModel::addWidget(const QString& type)
 {
-    addWidgetAt(type, 160 + (m_widgets.size() % 6) * 24, 120 + (m_widgets.size() % 6) * 24);
+    addWidgetAt(type, 160.0 + (m_widgets.size() % 6) * 24,
+                      120.0 + (m_widgets.size() % 6) * 24);
 }
 
 void CanvasViewModel::addWidgetAt(const QString& type, qreal x, qreal y)
 {
     beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
-
     WidgetItem item = createWidget(type);
     item.id = m_nextId++;
-    item.x = x;
-    item.y = y;
-
+    item.x  = x;
+    item.y  = y;
     m_widgets.append(item);
+    // Keep shadow screen model in sync (canvas zone)
+    m_screen.canvas.widgets.append(eversight::toWidgetModel(item));
     endInsertRows();
-
     emit widgetCountChanged();
     selectWidget(item.id);
 }
 
 void CanvasViewModel::selectWidget(int id)
 {
-    if (m_selectedWidgetId == id)
-        return;
-
+    if (m_selectedWidgetId == id) return;
     m_selectedWidgetId = id;
     emit selectedWidgetChanged();
 }
 
-void CanvasViewModel::clearSelection()
-{
-    selectWidget(-1);
-}
+void CanvasViewModel::clearSelection()   { selectWidget(-1); }
 
 void CanvasViewModel::removeSelectedWidget()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
+    if (row < 0) return;
     beginRemoveRows(QModelIndex(), row, row);
     m_widgets.removeAt(row);
+    if (row >= 0 && row < m_screen.canvas.widgets.size())
+        m_screen.canvas.widgets.removeAt(row);
     endRemoveRows();
     emit widgetCountChanged();
-
     m_selectedWidgetId = -1;
     emit selectedWidgetChanged();
 }
@@ -264,19 +237,17 @@ void CanvasViewModel::removeSelectedWidget()
 void CanvasViewModel::duplicateSelectedWidget()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
+    if (row < 0) return;
     WidgetItem item = m_widgets.at(row);
-    item.id = m_nextId++;
+    item.id     = m_nextId++;
     item.title += " Copy";
-    item.x += 24;
-    item.y += 24;
-
+    item.x     += 24;
+    item.y     += 24;
     beginInsertRows(QModelIndex(), m_widgets.size(), m_widgets.size());
     m_widgets.append(item);
+    // Mirror duplicate into shadow screen model
+    m_screen.canvas.widgets.append(eversight::toWidgetModel(item));
     endInsertRows();
-
     emit widgetCountChanged();
     selectWidget(item.id);
 }
@@ -284,133 +255,160 @@ void CanvasViewModel::duplicateSelectedWidget()
 void CanvasViewModel::moveSelectedForward()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0 || row >= m_widgets.size() - 1)
-        return;
-
+    if (row < 0 || row >= m_widgets.size() - 1) return;
     beginMoveRows(QModelIndex(), row, row, QModelIndex(), row + 2);
     m_widgets.move(row, row + 1);
+    if (row >= 0 && row < m_screen.canvas.widgets.size() - 1)
+        m_screen.canvas.widgets.move(row, row + 1);
     endMoveRows();
 }
 
 void CanvasViewModel::moveSelectedBackward()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row <= 0)
-        return;
-
+    if (row <= 0) return;
     beginMoveRows(QModelIndex(), row, row, QModelIndex(), row - 1);
     m_widgets.move(row, row - 1);
+    if (row > 0 && row < m_screen.canvas.widgets.size())
+        m_screen.canvas.widgets.move(row, row - 1);
     endMoveRows();
+}
+
+void CanvasViewModel::bringSelectedToFront()
+{
+    const int row = indexOfWidget(m_selectedWidgetId);
+    if (row < 0 || row >= m_widgets.size() - 1) return;
+    beginMoveRows(QModelIndex(), row, row, QModelIndex(), m_widgets.size());
+    m_widgets.move(row, m_widgets.size() - 1);
+    if (row >= 0 && row < m_screen.canvas.widgets.size())
+        m_screen.canvas.widgets.move(row, m_screen.canvas.widgets.size() - 1);
+    endMoveRows();
+}
+
+void CanvasViewModel::bringSelectedForward()
+{
+    moveSelectedForward();
+}
+
+void CanvasViewModel::sendSelectedToBack()
+{
+    const int row = indexOfWidget(m_selectedWidgetId);
+    if (row <= 0) return;
+    beginMoveRows(QModelIndex(), row, row, QModelIndex(), 0);
+    m_widgets.move(row, 0);
+    if (row >= 0 && row < m_screen.canvas.widgets.size())
+        m_screen.canvas.widgets.move(row, 0);
+    endMoveRows();
+}
+
+void CanvasViewModel::sendSelectedBackward()
+{
+    moveSelectedBackward();
+}
+
+void CanvasViewModel::distributeSelectedHorizontal()
+{
+    // Stub: distribution logic not implemented (UI-only integration)
+}
+
+void CanvasViewModel::distributeSelectedVertical()
+{
+    // Stub: distribution logic not implemented (UI-only integration)
+}
+
+void CanvasViewModel::undo()
+{
+    // Stub: undo stack not implemented yet
+}
+
+void CanvasViewModel::redo()
+{
+    // Stub: redo stack not implemented yet
+}
+
+void CanvasViewModel::fitToWindow()
+{
+    // Stub: fit-to-window handled by view layer or later implementation
 }
 
 void CanvasViewModel::alignSelected(const QString& mode, qreal canvasWidth, qreal canvasHeight)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
-    WidgetItem& widget = m_widgets[row];
-
-    if (mode == "left") {
-        widget.x = 0;
-    } else if (mode == "hcenter") {
-        widget.x = (canvasWidth - widget.width) / 2.0;
-    } else if (mode == "right") {
-        widget.x = canvasWidth - widget.width;
-    } else if (mode == "top") {
-        widget.y = 0;
-    } else if (mode == "vcenter") {
-        widget.y = (canvasHeight - widget.height) / 2.0;
-    } else if (mode == "bottom") {
-        widget.y = canvasHeight - widget.height;
-    }
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { XRole, YRole });
+    if (row < 0) return;
+    WidgetItem& w = m_widgets[row];
+    if      (mode == "left")    w.x = 0;
+    else if (mode == "hcenter") w.x = (canvasWidth  - w.width)  / 2.0;
+    else if (mode == "right")   w.x = canvasWidth  - w.width;
+    else if (mode == "top")     w.y = 0;
+    else if (mode == "vcenter") w.y = (canvasHeight - w.height) / 2.0;
+    else if (mode == "bottom")  w.y = canvasHeight - w.height;
+    const QModelIndex mi = index(row, 0);
+    emit dataChanged(mi, mi, { XRole, YRole });
     emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::updateWidgetGeometry(int id, qreal x, qreal y, qreal width, qreal height)
 {
     const int row = indexOfWidget(id);
-    if (row < 0)
-        return;
-
-    WidgetItem& widget = m_widgets[row];
-    widget.x = x;
-    widget.y = y;
-    widget.width = qMax<qreal>(24, width);
-    widget.height = qMax<qreal>(24, height);
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { XRole, YRole, WidthRole, HeightRole });
-
-    if (m_selectedWidgetId == id)
-        emit selectedWidgetChanged();
+    if (row < 0) return;
+    WidgetItem& w = m_widgets[row];
+    w.x = x; w.y = y;
+    w.width  = qMax<qreal>(24, width);
+    w.height = qMax<qreal>(24, height);
+    if (row >= 0 && row < m_screen.canvas.widgets.size()) {
+        m_screen.canvas.widgets[row].geometry = QRectF(w.x, w.y, w.width, w.height);
+    }
+    const QModelIndex mi = index(row, 0);
+    emit dataChanged(mi, mi, { XRole, YRole, WidthRole, HeightRole });
+    if (m_selectedWidgetId == id) emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::updateSelectedTitle(const QString& title)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
+    if (row < 0) return;
     m_widgets[row].title = title;
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { TitleRole });
+    emit dataChanged(index(row,0), index(row,0), { TitleRole });
     emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::updateSelectedData(const QString& dataSource, const QString& controlType)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
-    m_widgets[row].dataSource = dataSource;
+    if (row < 0) return;
+    m_widgets[row].dataSource  = dataSource;
     m_widgets[row].controlType = controlType;
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { DataSourceRole, ControlTypeRole });
+    emit dataChanged(index(row,0), index(row,0), { DataSourceRole, ControlTypeRole });
     emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::updateSelectedAppearance(const QString& buttonColor, const QString& borderColor, const QString& iconColor)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
+    if (row < 0) return;
     m_widgets[row].buttonColor = buttonColor;
     m_widgets[row].borderColor = borderColor;
-    m_widgets[row].iconColor = iconColor;
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { ButtonColorRole, BorderColorRole, IconColorRole });
+    m_widgets[row].iconColor   = iconColor;
+    emit dataChanged(index(row,0), index(row,0), { ButtonColorRole, BorderColorRole, IconColorRole });
     emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::updateSelectedAutoFill(bool autoFill)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return;
-
+    if (row < 0) return;
     m_widgets[row].autoFill = autoFill;
-
-    const QModelIndex modelIndex = index(row, 0);
-    emit dataChanged(modelIndex, modelIndex, { AutoFillRole });
+    emit dataChanged(index(row,0), index(row,0), { AutoFillRole });
     emit selectedWidgetChanged();
 }
 
 void CanvasViewModel::clear()
 {
-    if (m_widgets.isEmpty())
-        return;
-
+    if (m_widgets.isEmpty()) return;
     beginResetModel();
     m_widgets.clear();
+    // Keep shadow screen model empty as well
+    m_screen.canvas.widgets.clear();
     m_selectedWidgetId = -1;
     endResetModel();
     emit widgetCountChanged();
@@ -420,34 +418,29 @@ void CanvasViewModel::clear()
 bool CanvasViewModel::saveToFile(const QString& filePath) const
 {
     QJsonArray widgets;
-
-    for (const WidgetItem& widget : m_widgets) {
-        QJsonObject object;
-        object["id"] = widget.id;
-        object["type"] = widget.type;
-        object["title"] = widget.title;
-        object["x"] = widget.x;
-        object["y"] = widget.y;
-        object["width"] = widget.width;
-        object["height"] = widget.height;
-        object["dataSource"] = widget.dataSource;
-        object["controlType"] = widget.controlType;
-        object["buttonColor"] = widget.buttonColor;
-        object["borderColor"] = widget.borderColor;
-        object["iconColor"] = widget.iconColor;
-        object["autoFill"] = widget.autoFill;
-        widgets.append(object);
+    for (const WidgetItem& w : m_widgets) {
+        QJsonObject obj;
+        obj["id"]          = w.id;
+        obj["type"]        = w.type;
+        obj["title"]       = w.title;
+        obj["x"]           = w.x;
+        obj["y"]           = w.y;
+        obj["width"]       = w.width;
+        obj["height"]      = w.height;
+        obj["dataSource"]  = w.dataSource;
+        obj["controlType"] = w.controlType;
+        obj["buttonColor"] = w.buttonColor;
+        obj["borderColor"] = w.borderColor;
+        obj["iconColor"]   = w.iconColor;
+        obj["autoFill"]    = w.autoFill;
+        widgets.append(obj);
     }
-
     QJsonObject root;
-    root["schema"] = "EverSightDesigner.Layout.v1";
-    root["nextId"] = m_nextId;
+    root["schema"]  = "EverSightDesigner.Layout.v1";
+    root["nextId"]  = m_nextId;
     root["widgets"] = widgets;
-
     QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
-        return false;
-
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     return true;
 }
@@ -455,157 +448,73 @@ bool CanvasViewModel::saveToFile(const QString& filePath) const
 bool CanvasViewModel::loadFromFile(const QString& filePath)
 {
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly))
-        return false;
-
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
-    if (!document.isObject())
-        return false;
-
-    const QJsonObject root = document.object();
-    const QJsonArray widgets = root["widgets"].toArray();
-
-    QList<WidgetItem> loadedWidgets;
+    if (!file.open(QIODevice::ReadOnly)) return false;
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    if (!doc.isObject()) return false;
+    const QJsonObject root    = doc.object();
+    const QJsonArray  widgets = root["widgets"].toArray();
+    QList<WidgetItem> loaded;
     int maxId = 0;
-
-    for (const QJsonValue& value : widgets) {
-        const QJsonObject object = value.toObject();
-
-        WidgetItem widget;
-        widget.id = object["id"].toInt();
-        widget.type = object["type"].toString();
-        widget.title = object["title"].toString(widget.type);
-        widget.x = object["x"].toDouble();
-        widget.y = object["y"].toDouble();
-        widget.width = object["width"].toDouble(160);
-        widget.height = object["height"].toDouble(92);
-        widget.dataSource = object["dataSource"].toString("AllProcess");
-        widget.controlType = object["controlType"].toString("Both Display");
-        widget.buttonColor = object["buttonColor"].toString("#2f2f2f");
-        widget.borderColor = object["borderColor"].toString("#272727");
-        widget.iconColor = object["iconColor"].toString("#f6f6f6");
-        widget.autoFill = object["autoFill"].toBool(false);
-
-        if (widget.id <= 0 || widget.type.isEmpty())
-            continue;
-
-        maxId = qMax(maxId, widget.id);
-        loadedWidgets.append(widget);
+    for (const QJsonValue& val : widgets) {
+        const QJsonObject obj = val.toObject();
+        WidgetItem w;
+        w.id          = obj["id"].toInt();
+        w.type        = obj["type"].toString();
+        w.title       = obj["title"].toString(w.type);
+        w.x           = obj["x"].toDouble();
+        w.y           = obj["y"].toDouble();
+        w.width       = obj["width"].toDouble(160);
+        w.height      = obj["height"].toDouble(92);
+        w.dataSource  = obj["dataSource"].toString("AllProcess");
+        w.controlType = obj["controlType"].toString("Both Display");
+        w.buttonColor = obj["buttonColor"].toString("#2f2f2f");
+        w.borderColor = obj["borderColor"].toString("#272727");
+        w.iconColor   = obj["iconColor"].toString("#f6f6f6");
+        w.autoFill    = obj["autoFill"].toBool(false);
+        if (w.id <= 0 || w.type.isEmpty()) continue;
+        maxId = qMax(maxId, w.id);
+        loaded.append(w);
     }
-
     beginResetModel();
-    m_widgets = loadedWidgets;
-    m_nextId = qMax(root["nextId"].toInt(maxId + 1), maxId + 1);
+    m_widgets          = loaded;
+    m_nextId           = qMax(root["nextId"].toInt(maxId + 1), maxId + 1);
     m_selectedWidgetId = -1;
+    // Rebuild shadow screen model to mirror loaded widgets
+    m_screen.canvas.widgets.clear();
+    for (const WidgetItem &w : qAsConst(m_widgets))
+        m_screen.canvas.widgets.append(eversight::toWidgetModel(w));
     endResetModel();
-
     emit widgetCountChanged();
     emit selectedWidgetChanged();
     return true;
 }
 
-int CanvasViewModel::selectedWidgetId() const
-{
-    return m_selectedWidgetId;
-}
-
-QString CanvasViewModel::selectedWidgetType() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->type : QString();
-}
-
-QString CanvasViewModel::selectedWidgetTitle() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->title : QString();
-}
-
-qreal CanvasViewModel::selectedWidgetX() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->x : 0;
-}
-
-qreal CanvasViewModel::selectedWidgetY() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->y : 0;
-}
-
-qreal CanvasViewModel::selectedWidgetWidth() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->width : 0;
-}
-
-qreal CanvasViewModel::selectedWidgetHeight() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->height : 0;
-}
-
-QString CanvasViewModel::selectedDataSource() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->dataSource : QString();
-}
-
-QString CanvasViewModel::selectedControlType() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->controlType : QString();
-}
-
-QString CanvasViewModel::selectedButtonColor() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->buttonColor : QString();
-}
-
-QString CanvasViewModel::selectedBorderColor() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->borderColor : QString();
-}
-
-QString CanvasViewModel::selectedIconColor() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->iconColor : QString();
-}
-
-bool CanvasViewModel::selectedAutoFill() const
-{
-    const WidgetItem* widget = selectedWidget();
-    return widget ? widget->autoFill : false;
-}
-
-bool CanvasViewModel::hasSelection() const
-{
-    return selectedWidget() != nullptr;
-}
-
-int CanvasViewModel::widgetCount() const
-{
-    return m_widgets.size();
-}
+// Property getters
+int     CanvasViewModel::selectedWidgetId()     const { return m_selectedWidgetId; }
+QString CanvasViewModel::selectedWidgetType()   const { auto* w = selectedWidget(); return w ? w->type        : QString(); }
+QString CanvasViewModel::selectedWidgetTitle()  const { auto* w = selectedWidget(); return w ? w->title       : QString(); }
+qreal   CanvasViewModel::selectedWidgetX()      const { auto* w = selectedWidget(); return w ? w->x           : 0; }
+qreal   CanvasViewModel::selectedWidgetY()      const { auto* w = selectedWidget(); return w ? w->y           : 0; }
+qreal   CanvasViewModel::selectedWidgetWidth()  const { auto* w = selectedWidget(); return w ? w->width       : 0; }
+qreal   CanvasViewModel::selectedWidgetHeight() const { auto* w = selectedWidget(); return w ? w->height      : 0; }
+QString CanvasViewModel::selectedDataSource()   const { auto* w = selectedWidget(); return w ? w->dataSource  : QString(); }
+QString CanvasViewModel::selectedControlType()  const { auto* w = selectedWidget(); return w ? w->controlType : QString(); }
+QString CanvasViewModel::selectedButtonColor()  const { auto* w = selectedWidget(); return w ? w->buttonColor : QString(); }
+QString CanvasViewModel::selectedBorderColor()  const { auto* w = selectedWidget(); return w ? w->borderColor : QString(); }
+QString CanvasViewModel::selectedIconColor()    const { auto* w = selectedWidget(); return w ? w->iconColor   : QString(); }
+bool    CanvasViewModel::selectedAutoFill()     const { auto* w = selectedWidget(); return w ? w->autoFill    : false; }
+bool    CanvasViewModel::hasSelection()         const { return selectedWidget() != nullptr; }
+int     CanvasViewModel::widgetCount()          const { return m_widgets.size(); }
 
 int CanvasViewModel::indexOfWidget(int id) const
 {
-    for (int i = 0; i < m_widgets.size(); ++i) {
-        if (m_widgets.at(i).id == id)
-            return i;
-    }
-
+    for (int i = 0; i < m_widgets.size(); ++i)
+        if (m_widgets.at(i).id == id) return i;
     return -1;
 }
 
 const WidgetItem* CanvasViewModel::selectedWidget() const
 {
     const int row = indexOfWidget(m_selectedWidgetId);
-    if (row < 0)
-        return nullptr;
-
-    return &m_widgets.at(row);
+    return row >= 0 ? &m_widgets.at(row) : nullptr;
 }

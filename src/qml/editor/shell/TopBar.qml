@@ -8,26 +8,87 @@ Rectangle {
 
     property int zoomPercent: 84
 
+    signal openRequested()
+    signal saveRequested()
+    signal templateManagerRequested()
+    signal saveTemplateRequested()
+
+    signal bringToFrontRequested()
+    signal bringForwardRequested()
+    signal sendToBackRequested()
+    signal sendBackwardRequested()
+
+    signal alignLeftRequested()
+    signal alignCenterRequested()
+    signal alignRightRequested()
+    signal alignTopRequested()
+    signal alignMiddleRequested()
+    signal alignBottomRequested()
+
+    signal distributeHorizontalRequested()
+    signal distributeVerticalRequested()
+
+    signal undoRequested()
+    signal redoRequested()
+    signal deleteRequested()
+
+    signal zoomChanged(int value)
+    signal fitToWindowRequested()
+
+    signal toggleTopRequested()
+    signal toggleBottomRequested()
+    signal toggleLeftRequested()
+    signal toggleRightRequested()
+
     signal previewRequested()
     signal exportRequested()
-    signal saveRequested()
-    signal loadRequested()
     signal clearRequested()
     signal duplicateRequested()
-    signal deleteRequested()
     signal forwardRequested()
     signal backwardRequested()
-    signal zoomChanged(int value)
 
-    color: "#f4f4f4"
-    implicitHeight: 78
+    color: "#f7f7f7"
+    implicitHeight: 64
+
+    Action { id: actOpen; text: "Open"; shortcut: "Ctrl+O"; onTriggered: root.openRequested() }
+    Action { id: actSave; text: "Save"; shortcut: "Ctrl+S"; onTriggered: root.saveRequested() }
+    Action { id: actTemplateManager; text: "Template Manager"; onTriggered: root.templateManagerRequested() }
+    Action { id: actSaveTemplate; text: "Save Template"; onTriggered: root.saveTemplateRequested() }
+
+    Action { id: actBringToFront; text: "Bring to Front"; enabled: false; onTriggered: root.bringToFrontRequested() }
+    Action { id: actBringForward; text: "Bring Forward"; enabled: false; onTriggered: root.bringForwardRequested() }
+    Action { id: actSendToBack; text: "Send to Back"; enabled: false; onTriggered: root.sendToBackRequested() }
+    Action { id: actSendBackward; text: "Send Backward"; enabled: false; onTriggered: root.sendBackwardRequested() }
+
+    Action { id: actAlignLeft; text: "Align Left"; enabled: false; onTriggered: root.alignLeftRequested() }
+    Action { id: actAlignCenter; text: "Align Center"; enabled: false; onTriggered: root.alignCenterRequested() }
+    Action { id: actAlignRight; text: "Align Right"; enabled: false; onTriggered: root.alignRightRequested() }
+    Action { id: actAlignTop; text: "Align Top"; enabled: false; onTriggered: root.alignTopRequested() }
+    Action { id: actAlignMiddle; text: "Align Middle"; enabled: false; onTriggered: root.alignMiddleRequested() }
+    Action { id: actAlignBottom; text: "Align Bottom"; enabled: false; onTriggered: root.alignBottomRequested() }
+
+    Action { id: actDistributeH; text: "Distribute Horizontally"; enabled: false; onTriggered: root.distributeHorizontalRequested() }
+    Action { id: actDistributeV; text: "Distribute Vertically"; enabled: false; onTriggered: root.distributeVerticalRequested() }
+
+    Action { id: actUndo; text: "Undo"; shortcut: "Ctrl+Z"; enabled: false; onTriggered: root.undoRequested() }
+    Action { id: actRedo; text: "Redo"; shortcut: "Ctrl+Y"; enabled: false; onTriggered: root.redoRequested() }
+    Action { id: actDelete; text: "Delete"; shortcut: "Del"; enabled: false; onTriggered: root.deleteRequested() }
+    Action { id: actFitToWindow; text: "Fit to Window"; onTriggered: root.fitToWindowRequested() }
+
+    Action { id: actToggleTop; text: "Toggle Top Fixed Area"; onTriggered: root.toggleTopRequested() }
+    Action { id: actToggleBottom; text: "Toggle Bottom Fixed Area"; onTriggered: root.toggleBottomRequested() }
+    Action { id: actToggleLeft; text: "Toggle Left Fixed Area"; onTriggered: root.toggleLeftRequested() }
+    Action { id: actToggleRight; text: "Toggle Right Fixed Area"; onTriggered: root.toggleRightRequested() }
+
+    Action { id: actPreview; text: "Preview"; onTriggered: root.previewRequested() }
+    Action { id: actExport; text: "Export"; onTriggered: root.exportRequested() }
 
     Rectangle {
         id: titleBar
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        height: 34
+        height: 28
         color: "#242424"
 
         Label {
@@ -36,7 +97,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             text: "Run-time Interface Design"
             color: "#ffffff"
-            font.pixelSize: 15
+            font.pixelSize: 13
             font.bold: true
         }
 
@@ -53,7 +114,6 @@ Rectangle {
             onDoubleClicked: {
                 if (!Window.window)
                     return
-
                 if (Window.window.visibility === Window.Maximized)
                     Window.window.showNormal()
                 else
@@ -68,16 +128,9 @@ Rectangle {
             anchors.bottom: parent.bottom
             spacing: 0
 
+            WindowButton { width: 42; height: parent.height; label: "-"; tooltip: "Minimize"; onClicked: Window.window.showMinimized() }
             WindowButton {
-                width: 46
-                height: parent.height
-                label: "-"
-                tooltip: "Minimize"
-                onClicked: Window.window.showMinimized()
-            }
-
-            WindowButton {
-                width: 46
+                width: 42
                 height: parent.height
                 label: Window.window && Window.window.visibility === Window.Maximized ? "[]" : "[ ]"
                 tooltip: "Maximize"
@@ -88,80 +141,200 @@ Rectangle {
                         Window.window.showMaximized()
                 }
             }
+            WindowButton { width: 42; height: parent.height; label: "X"; tooltip: "Close"; danger: true; onClicked: Window.window.close() }
+        }
+    }
 
-            WindowButton {
-                width: 46
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: titleBar.bottom
+        anchors.bottom: parent.bottom
+        color: "#f7f7f7"
+        border.color: "#d2d2d2"
+        border.width: 1
+
+        Flickable {
+            anchors.fill: parent
+            anchors.leftMargin: 8
+            anchors.rightMargin: 8
+            contentWidth: toolbarRow.implicitWidth
+            contentHeight: height
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
+
+            Row {
+                id: toolbarRow
                 height: parent.height
-                label: "X"
-                tooltip: "Close"
-                danger: true
-                onClicked: Window.window.close()
+                spacing: 5
+
+                IconButton { action: actOpen; iconSource: "assets/icons/Open.png"; fallbackText: "O" }
+                IconButton { action: actSave; iconSource: "assets/icons/Save.png"; fallbackText: "S" }
+                IconButton { action: actTemplateManager; fallbackText: "TM"; glyph: "\u25a3" }
+                IconButton { action: actSaveTemplate; fallbackText: "ST"; glyph: "\u229e" }
+
+                ToolbarDivider {}
+
+                IconButton { action: actBringToFront; iconSource: "assets/icons/toolbarFronted_normal.png"; fallbackText: "FF" }
+                IconButton { action: actBringForward; fallbackText: "F"; glyph: "\u25c6" }
+                IconButton { action: actSendToBack; fallbackText: "BB"; glyph: "\u25c7" }
+                IconButton { action: actSendBackward; fallbackText: "B"; glyph: "\u25c8" }
+
+                ToolbarDivider {}
+
+                IconButton { action: actAlignLeft; fallbackText: "L"; glyph: "\u22a2" }
+                IconButton { action: actAlignCenter; fallbackText: "C"; glyph: "\u2261" }
+                IconButton { action: actAlignRight; fallbackText: "R"; glyph: "\u22a3" }
+                IconButton { action: actAlignTop; fallbackText: "T"; glyph: "\u22a4" }
+                IconButton { action: actAlignMiddle; fallbackText: "M"; glyph: "\u2501" }
+                IconButton { action: actAlignBottom; fallbackText: "D"; glyph: "\u22a5" }
+
+                ToolbarDivider {}
+
+                IconButton { action: actDistributeH; fallbackText: "DH"; glyph: "\u2194" }
+                IconButton { action: actDistributeV; fallbackText: "DV"; glyph: "\u2195" }
+
+                ToolbarDivider {}
+
+                IconButton { action: actUndo; iconSource: "assets/icons/Undo.png"; fallbackText: "U" }
+                IconButton { action: actRedo; iconSource: "assets/icons/Redo.png"; fallbackText: "R" }
+                IconButton { action: actDelete; iconSource: "assets/icons/Remove.png"; fallbackText: "Del" }
+                IconButton { action: actFitToWindow; fallbackText: "Fit"; glyph: "\u25a3" }
+
+                ToolbarDivider {}
+
+                Slider {
+                    id: zoomSlider
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 118
+                    height: 28
+                    from: 40
+                    to: 160
+                    stepSize: 1
+                    value: root.zoomPercent
+                    onMoved: root.zoomChanged(Math.round(value))
+                }
+
+                Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 44
+                    text: root.zoomPercent + "%"
+                    color: "#6f7479"
+                    font.pixelSize: 12
+                }
+
+                ToolbarDivider {}
+
+                IconButton { action: actToggleTop; fallbackText: "Top"; glyph: "\u25ac" }
+                IconButton { action: actToggleBottom; fallbackText: "Bot"; glyph: "\u25ad" }
+                IconButton { action: actToggleLeft; fallbackText: "Left"; glyph: "\u25e7" }
+                IconButton { action: actToggleRight; fallbackText: "Right"; glyph: "\u25e8" }
+
+                Item { width: 16; height: 1 }
+
+                TextButton { action: actPreview }
+                TextButton { action: actExport }
             }
         }
     }
 
-    RowLayout {
-        anchors.top: titleBar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        spacing: 10
+    function updateActionStates(selectedCount) {
+        var hasSelection = selectedCount > 0
+        var multipleSelection = selectedCount > 1
 
-        ToolButton { text: "Open"; ToolTip.visible: hovered; ToolTip.text: "Load layout"; onClicked: root.loadRequested() }
-        ToolButton { text: "Save"; ToolTip.visible: hovered; ToolTip.text: "Save layout"; onClicked: root.saveRequested() }
+        actBringToFront.enabled = hasSelection
+        actBringForward.enabled = hasSelection
+        actSendToBack.enabled = hasSelection
+        actSendBackward.enabled = hasSelection
+        actDelete.enabled = hasSelection
 
-        ToolSeparator {}
+        actAlignLeft.enabled = hasSelection
+        actAlignCenter.enabled = hasSelection
+        actAlignRight.enabled = hasSelection
+        actAlignTop.enabled = hasSelection
+        actAlignMiddle.enabled = hasSelection
+        actAlignBottom.enabled = hasSelection
 
-        ToolButton { text: "Copy"; ToolTip.visible: hovered; ToolTip.text: "Duplicate selected control"; onClicked: root.duplicateRequested() }
-        ToolButton { text: "Up"; ToolTip.visible: hovered; ToolTip.text: "Bring forward"; onClicked: root.forwardRequested() }
-        ToolButton { text: "Down"; ToolTip.visible: hovered; ToolTip.text: "Send backward"; onClicked: root.backwardRequested() }
+        actDistributeH.enabled = multipleSelection
+        actDistributeV.enabled = multipleSelection
+    }
 
-        ToolSeparator {}
+    component IconButton: ToolButton {
+        id: button
 
-        ToolButton { text: "Undo"; enabled: false; ToolTip.visible: hovered; ToolTip.text: "Undo" }
-        ToolButton { text: "Redo"; enabled: false; ToolTip.visible: hovered; ToolTip.text: "Redo" }
+        property string iconSource: ""
+        property string fallbackText: ""
+        property string glyph: ""
 
-        ToolSeparator {}
+        width: 28
+        height: 28
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        padding: 0
+        hoverEnabled: true
 
-        ToolButton { text: "Delete"; ToolTip.visible: hovered; ToolTip.text: "Delete selected control"; onClicked: root.deleteRequested() }
-        ToolButton { text: "Clear"; ToolTip.visible: hovered; ToolTip.text: "Clear canvas"; onClicked: root.clearRequested() }
-
-        ToolSeparator {}
-
-        Slider {
-            Layout.preferredWidth: 150
-            from: 40
-            to: 160
-            stepSize: 1
-            value: root.zoomPercent
-            onMoved: root.zoomChanged(Math.round(value))
+        background: Rectangle {
+            radius: 2
+            color: button.down ? "#d9dde1" : button.hovered ? "#eef1f4" : "transparent"
+            border.color: button.hovered ? "#b8bec5" : "transparent"
         }
 
-        Label {
-            text: root.zoomPercent + "%"
-            color: "#707780"
-            font.pixelSize: 14
+        contentItem: Item {
+            opacity: button.enabled ? 1.0 : 0.35
+
+            Image {
+                id: iconImage
+                anchors.centerIn: parent
+                width: 20
+                height: 20
+                source: button.iconSource
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                visible: button.iconSource.length > 0 && status === Image.Ready
+            }
+
+            Label {
+                anchors.centerIn: parent
+                text: button.glyph.length > 0 ? button.glyph : button.fallbackText
+                color: "#6e747a"
+                font.pixelSize: button.glyph.length > 0 ? 18 : 10
+                font.bold: button.glyph.length === 0
+                visible: button.iconSource.length === 0 || iconImage.status !== Image.Ready
+            }
         }
 
-        ToolSeparator {}
+        ToolTip.visible: hovered
+        ToolTip.text: action ? action.text : ""
+    }
 
-        ToolButton { text: "Settings"; ToolTip.visible: hovered; ToolTip.text: "Screen settings" }
+    component TextButton: Button {
+        id: button
 
-        Item {
-            Layout.fillWidth: true
+        height: 28
+        width: 72
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        padding: 0
+
+        background: Rectangle {
+            radius: 2
+            color: button.down ? "#d9dde1" : button.hovered ? "#eef1f4" : "#ffffff"
+            border.color: "#cdd2d6"
         }
 
-        Button {
-            text: "Preview"
-            onClicked: root.previewRequested()
+        contentItem: Label {
+            text: button.action ? button.action.text : ""
+            color: "#4d5359"
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 12
         }
+    }
 
-        Button {
-            text: "Export"
-            onClicked: root.exportRequested()
-        }
+    component ToolbarDivider: Rectangle {
+        width: 1
+        height: 24
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        color: "#d0d4d8"
     }
 
     component WindowButton: Rectangle {
@@ -179,7 +352,7 @@ Rectangle {
             anchors.centerIn: parent
             text: buttonRoot.label
             color: "#f0f0f0"
-            font.pixelSize: 14
+            font.pixelSize: 12
             font.bold: true
         }
 

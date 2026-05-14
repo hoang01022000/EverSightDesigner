@@ -403,6 +403,133 @@ Rectangle {
                         text: "Delete Control"
                         onClicked: canvasViewModel.removeSelectedWidget()
                     }
+                    
+                    // Type-aware sections
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: canvasViewModel.selectedWidgetType === "RunControl"
+                        spacing: 8
+
+                        SectionHeader { text: "Run Control" }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Control Type"; Layout.preferredWidth: 100 }
+                            ComboBox {
+                                Layout.fillWidth: true
+                                model: ["Once", "Continuously", "Both Display"]
+                                Component.onCompleted: currentIndex = Math.max(0, indexOfValue(canvasViewModel.selectedControlType))
+                                onActivated: canvasViewModel.updateSelectedData(dataSourceBox.currentText, currentText)
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: canvasViewModel.selectedWidgetType === "TextInput" || canvasViewModel.selectedWidgetType === "Label"
+                        spacing: 8
+
+                        SectionHeader { text: "Text" }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Data Type"; Layout.preferredWidth: 100 }
+                            ComboBox { Layout.fillWidth: true; model: ["String", "Number", "DateTime"] }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Format"; Layout.preferredWidth: 100 }
+                            TextField { Layout.fillWidth: true }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Text"; Layout.preferredWidth: 100 }
+                            TextField { Layout.fillWidth: true; onEditingFinished: canvasViewModel.updateSelectedTitle(text) }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: canvasViewModel.selectedWidgetType === "DataTable" || canvasViewModel.selectedWidgetType === "Table"
+                        spacing: 8
+
+                        SectionHeader { text: "Table" }
+
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            Label { text: "Rows"; Layout.preferredWidth: 100 }
+                            TextField { Layout.fillWidth: true }
+                        }
+
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            Label { text: "Columns"; Layout.preferredWidth: 100 }
+                            TextField { Layout.fillWidth: true }
+                        }
+
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            Label { text: "Line Title"; Layout.preferredWidth: 100 }
+                            TextField { Layout.fillWidth: true }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: canvasViewModel.selectedWidgetType === "CameraView" || canvasViewModel.selectedWidgetType === "Image"
+                        spacing: 8
+
+                        SectionHeader { text: "Image" }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Show Status Bar"; Layout.preferredWidth: 160 }
+                            Switch { }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Show Tools Bar"; Layout.preferredWidth: 160 }
+                            Switch { }
+                            Item { Layout.fillWidth: true }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Keep Last Result"; Layout.preferredWidth: 160 }
+                            Switch { }
+                            Item { Layout.fillWidth: true }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: canvasViewModel.selectedWidgetType === "Button"
+                        spacing: 8
+
+                        SectionHeader { text: "Button" }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Show Text"; Layout.preferredWidth: 100 }
+                            Switch { }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            Label { text: "Trigger Type"; Layout.preferredWidth: 100 }
+                            ComboBox { Layout.fillWidth: true; model: ["Immediate", "OnRelease", "Toggle"] }
+                        }
+                    }
                 }
             }
         }
