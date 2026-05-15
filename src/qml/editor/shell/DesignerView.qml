@@ -7,7 +7,7 @@ import EverSightDesigner
 Item {
     id: root
     property int zoomPercent: 100
-    property bool startupFitApplied: false
+    property bool fitToWindowMode: true
 
     function fitCanvasToWindow() {
         if (!designCanvas || designCanvas.width <= 0 || designCanvas.height <= 0)
@@ -19,7 +19,6 @@ Item {
                     designCanvas.designHeight,
                     designCanvas.viewportHorizontalPadding,
                     designCanvas.viewportVerticalPadding)
-        root.startupFitApplied = true
     }
 
     Component.onCompleted: Qt.callLater(root.fitCanvasToWindow)
@@ -72,14 +71,14 @@ Item {
             onDuplicateRequested: canvasViewModel.duplicateSelectedWidget()
 
             // View
-            onZoomChanged: function(value) { root.zoomPercent = value }
-            onFitToWindowRequested: root.zoomPercent = canvasViewModel.fittedZoomPercent(
-                                        designCanvas.width,
-                                        designCanvas.height,
-                                        designCanvas.designWidth,
-                                        designCanvas.designHeight,
-                                        designCanvas.viewportHorizontalPadding,
-                                        designCanvas.viewportVerticalPadding)
+            onZoomChanged: function(value) {
+                root.fitToWindowMode = false
+                root.zoomPercent = value
+            }
+            onFitToWindowRequested: {
+                root.fitToWindowMode = true
+                root.fitCanvasToWindow()
+            }
 
             // Fixed area
             onToggleTopRequested: fixedBarViewModel.setTopVisible(!fixedBarViewModel.topVisible)
@@ -132,8 +131,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 zoom: root.zoomPercent / 100
-                onWidthChanged: if (!root.startupFitApplied) Qt.callLater(root.fitCanvasToWindow)
-                onHeightChanged: if (!root.startupFitApplied) Qt.callLater(root.fitCanvasToWindow)
+                onWidthChanged: if (root.fitToWindowMode) Qt.callLater(root.fitCanvasToWindow)
+                onHeightChanged: if (root.fitToWindowMode) Qt.callLater(root.fitCanvasToWindow)
             }
 
             InspectorPanel {

@@ -913,55 +913,106 @@ void CanvasViewModel::duplicateSelectedWidget()
 void CanvasViewModel::moveSelectedForward()
 {
     QList<int> rows = selectedRows();
-    if (rows.isEmpty() || rows.last() >= m_widgets.size() - 1) return;
+    if (rows.isEmpty()) return;
 
     pushUndoState();
     beginResetModel();
     std::sort(rows.begin(), rows.end(), std::greater<int>());
+    bool changed = false;
     for (int row : rows) {
-        if (row < m_widgets.size() - 1 && !m_selectedWidgetIds.contains(m_widgets.at(row + 1).id))
-            m_widgets.move(row, row + 1);
+        if (row < 0 || row >= m_widgets.size())
+            continue;
+        const int parentRegionId = m_widgets.at(row).parentRegionId;
+        int nextRow = -1;
+        for (int i = row + 1; i < m_widgets.size(); ++i) {
+            if (m_widgets.at(i).parentRegionId != parentRegionId)
+                continue;
+            if (m_selectedWidgetIds.contains(m_widgets.at(i).id))
+                continue;
+            nextRow = i;
+            break;
+        }
+        if (nextRow >= 0) {
+            m_widgets.move(row, nextRow);
+            changed = true;
+        }
     }
     syncScreenFromWidgets();
     endResetModel();
-    emitAllWidgetDataChanged();
+    if (changed)
+        emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::moveSelectedBackward()
 {
     QList<int> rows = selectedRows();
-    if (rows.isEmpty() || rows.first() <= 0) return;
+    if (rows.isEmpty()) return;
 
     pushUndoState();
     beginResetModel();
     std::sort(rows.begin(), rows.end());
+    bool changed = false;
     for (int row : rows) {
-        if (row > 0 && !m_selectedWidgetIds.contains(m_widgets.at(row - 1).id))
-            m_widgets.move(row, row - 1);
+        if (row < 0 || row >= m_widgets.size())
+            continue;
+        const int parentRegionId = m_widgets.at(row).parentRegionId;
+        int previousRow = -1;
+        for (int i = row - 1; i >= 0; --i) {
+            if (m_widgets.at(i).parentRegionId != parentRegionId)
+                continue;
+            if (m_selectedWidgetIds.contains(m_widgets.at(i).id))
+                continue;
+            previousRow = i;
+            break;
+        }
+        if (previousRow >= 0) {
+            m_widgets.move(row, previousRow);
+            changed = true;
+        }
     }
     syncScreenFromWidgets();
     endResetModel();
-    emitAllWidgetDataChanged();
+    if (changed)
+        emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::bringSelectedToFront()
 {
     const QList<int> rows = selectedRows();
-    if (rows.isEmpty() || rows.last() >= m_widgets.size() - 1) return;
+    if (rows.isEmpty()) return;
 
     pushUndoState();
-    QList<WidgetItem> selected;
-    for (int row : rows)
-        selected.append(m_widgets.at(row));
-
     beginResetModel();
-    for (int i = rows.size() - 1; i >= 0; --i)
-        m_widgets.removeAt(rows.at(i));
-    for (const WidgetItem& item : selected)
-        m_widgets.append(item);
+    bool changed = false;
+    bool moved = true;
+    while (moved) {
+        moved = false;
+        QList<int> currentRows = selectedRows();
+        std::sort(currentRows.begin(), currentRows.end(), std::greater<int>());
+        for (int row : currentRows) {
+            if (row < 0 || row >= m_widgets.size())
+                continue;
+            const int parentRegionId = m_widgets.at(row).parentRegionId;
+            int nextRow = -1;
+            for (int i = row + 1; i < m_widgets.size(); ++i) {
+                if (m_widgets.at(i).parentRegionId != parentRegionId)
+                    continue;
+                if (m_selectedWidgetIds.contains(m_widgets.at(i).id))
+                    continue;
+                nextRow = i;
+                break;
+            }
+            if (nextRow >= 0) {
+                m_widgets.move(row, nextRow);
+                moved = true;
+                changed = true;
+            }
+        }
+    }
     syncScreenFromWidgets();
     endResetModel();
-    emitAllWidgetDataChanged();
+    if (changed)
+        emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::bringSelectedForward()
@@ -972,21 +1023,40 @@ void CanvasViewModel::bringSelectedForward()
 void CanvasViewModel::sendSelectedToBack()
 {
     const QList<int> rows = selectedRows();
-    if (rows.isEmpty() || rows.first() <= 0) return;
+    if (rows.isEmpty()) return;
 
     pushUndoState();
-    QList<WidgetItem> selected;
-    for (int row : rows)
-        selected.append(m_widgets.at(row));
-
     beginResetModel();
-    for (int i = rows.size() - 1; i >= 0; --i)
-        m_widgets.removeAt(rows.at(i));
-    for (int i = selected.size() - 1; i >= 0; --i)
-        m_widgets.prepend(selected.at(i));
+    bool changed = false;
+    bool moved = true;
+    while (moved) {
+        moved = false;
+        QList<int> currentRows = selectedRows();
+        std::sort(currentRows.begin(), currentRows.end());
+        for (int row : currentRows) {
+            if (row < 0 || row >= m_widgets.size())
+                continue;
+            const int parentRegionId = m_widgets.at(row).parentRegionId;
+            int previousRow = -1;
+            for (int i = row - 1; i >= 0; --i) {
+                if (m_widgets.at(i).parentRegionId != parentRegionId)
+                    continue;
+                if (m_selectedWidgetIds.contains(m_widgets.at(i).id))
+                    continue;
+                previousRow = i;
+                break;
+            }
+            if (previousRow >= 0) {
+                m_widgets.move(row, previousRow);
+                moved = true;
+                changed = true;
+            }
+        }
+    }
     syncScreenFromWidgets();
     endResetModel();
-    emitAllWidgetDataChanged();
+    if (changed)
+        emitAllWidgetDataChanged();
 }
 
 void CanvasViewModel::sendSelectedBackward()
@@ -1751,6 +1821,16 @@ bool CanvasViewModel::mergeSelectedContainersByOrientation(const QString& orient
     }
 
     const bool horizontalMerge = orientation == QStringLiteral("horizontal");
+    const LayoutNode* first = findLayoutNode(ids.first());
+    const LayoutNode* second = findLayoutNode(ids.last());
+    if (!first || !second)
+        return false;
+
+    const bool sideBySide = qAbs((first->x + first->width) - second->x) <= EPSILON
+            || qAbs((second->x + second->width) - first->x) <= EPSILON;
+    const bool stacked = qAbs((first->y + first->height) - second->y) <= EPSILON
+            || qAbs((second->y + second->height) - first->y) <= EPSILON;
+
     for (int id : qAsConst(ids)) {
         const LayoutNode* node = findLayoutNode(id);
         if (horizontalMerge) {
@@ -1761,6 +1841,8 @@ bool CanvasViewModel::mergeSelectedContainersByOrientation(const QString& orient
                 return false;
         }
     }
+    if ((horizontalMerge && !sideBySide) || (!horizontalMerge && !stacked))
+        return false;
 
     QVariantList selected;
     for (int id : qAsConst(ids))

@@ -76,7 +76,7 @@ Column {
                 widgetName: modelData.displayName
                 widgetType: modelData.typeId
                 description: modelData.description
-                iconSource: modelData.iconSource ? modelData.iconSource : "assets/icons/Image.png"
+                iconSource: modelData.iconSource ? modelData.iconSource : "qrc:/qt/qml/EverSightDesigner/src/qml/editor/palette/assets/icons/Image.png"
 
                 onItemClicked: function(type) {
                     root.itemSelected(type)

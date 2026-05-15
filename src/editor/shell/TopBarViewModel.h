@@ -79,6 +79,5 @@ public:
     QString exportIcon() const;
 
 private:
-    // store as simple QString paths relative to qml
-    QString m_placeholder = "assets/icons/Image.png";
+    QString m_placeholder;
 };

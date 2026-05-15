@@ -7,7 +7,7 @@ Item {
     property string widgetName: "Image"
     property string widgetType: "CameraView"
     property string description: "Runtime control"
-    property string iconSource: "assets/icons/Image.png"
+    property string iconSource: "qrc:/qt/qml/EverSightDesigner/src/qml/editor/palette/assets/icons/Image.png"
 
     signal itemClicked(string type)
 

@@ -16,6 +16,8 @@ Item {
     property real boundsHeight: 720
     property bool showVerticalGuide: false
     property bool showHorizontalGuide: false
+    property bool geometryEditing: false
+    readonly property bool overlayVisible: visible && selected
 
     signal selectedRequested(int id, bool additive)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
@@ -40,14 +42,23 @@ Item {
             if (!item)
                 return
 
-            item.bgColor = Qt.binding(function() { return root.buttonColor })
-            item.borderColor = Qt.binding(function() { return root.borderColorValue })
-            item.fontColor = Qt.binding(function() { return root.iconColor })
+            if ("bgColor" in item)
+                item.bgColor = Qt.binding(function() { return root.buttonColor })
+            if ("borderColor" in item)
+                item.borderColor = Qt.binding(function() { return root.borderColorValue })
+            else if ("borderColorValue" in item)
+                item.borderColorValue = Qt.binding(function() { return root.borderColorValue })
+            if ("fontColor" in item)
+                item.fontColor = Qt.binding(function() { return root.iconColor })
+            else if ("textColor" in item)
+                item.textColor = Qt.binding(function() { return root.iconColor })
 
-            if (item.hasOwnProperty("labelText"))
+            if ("labelText" in item)
                 item.labelText = Qt.binding(function() { return root.widgetTitle })
-            if (item.hasOwnProperty("showText"))
+            if ("showText" in item)
                 item.showText = Qt.binding(function() { return root.widgetTitle })
+            else if ("text" in item)
+                item.text = Qt.binding(function() { return root.widgetTitle })
         }
     }
 
@@ -57,6 +68,7 @@ Item {
         drag.threshold: 8
 
         onPressed: function(mouse) {
+            root.geometryEditing = true
             root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
         }
 
@@ -80,6 +92,13 @@ Item {
             root.showVerticalGuide = false
             root.showHorizontalGuide = false
             root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
+            root.geometryEditing = false
+        }
+
+        onCanceled: {
+            root.showVerticalGuide = false
+            root.showHorizontalGuide = false
+            root.geometryEditing = false
         }
     }
 
@@ -90,7 +109,7 @@ Item {
         width: 1
         height: root.boundsHeight
         color: "#39a7ff"
-        visible: root.showVerticalGuide
+        visible: root.visible && root.showVerticalGuide
         z: 4000
     }
 
@@ -101,8 +120,102 @@ Item {
         width: root.boundsWidth
         height: 1
         color: "#39a7ff"
-        visible: root.showHorizontalGuide
+        visible: root.visible && root.showHorizontalGuide
         z: 4000
+    }
+
+    component DistanceLabel: Rectangle {
+        property string labelText: ""
+
+        width: Math.max(30, textItem.implicitWidth + 8)
+        height: 18
+        radius: 2
+        color: "#18212a"
+        border.color: "#39a7ff"
+        visible: root.overlayVisible
+        z: 4200
+
+        Text {
+            id: textItem
+            anchors.centerIn: parent
+            text: labelText
+            color: "#e7f3ff"
+            font.pixelSize: 10
+        }
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: 0
+        y: root.y + root.height / 2
+        width: Math.max(0, root.x)
+        height: 1
+        color: "#39a7ff"
+        visible: root.overlayVisible && width > 0
+        z: 4100
+    }
+
+    DistanceLabel {
+        parent: root.parent
+        x: Math.max(2, root.x / 2 - width / 2)
+        y: Math.max(2, root.y + root.height / 2 - height - 4)
+        labelText: Math.round(root.x).toString()
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: root.x + root.width
+        y: root.y + root.height / 2
+        width: Math.max(0, root.boundsWidth - root.x - root.width)
+        height: 1
+        color: "#39a7ff"
+        visible: root.overlayVisible && width > 0
+        z: 4100
+    }
+
+    DistanceLabel {
+        parent: root.parent
+        x: Math.min(root.boundsWidth - width - 2,
+                    root.x + root.width + (root.boundsWidth - root.x - root.width) / 2 - width / 2)
+        y: Math.max(2, root.y + root.height / 2 - height - 4)
+        labelText: Math.round(root.boundsWidth - root.x - root.width).toString()
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: root.x + root.width / 2
+        y: 0
+        width: 1
+        height: Math.max(0, root.y)
+        color: "#39a7ff"
+        visible: root.overlayVisible && height > 0
+        z: 4100
+    }
+
+    DistanceLabel {
+        parent: root.parent
+        x: Math.max(2, root.x + root.width / 2 + 4)
+        y: Math.max(2, root.y / 2 - height / 2)
+        labelText: Math.round(root.y).toString()
+    }
+
+    Rectangle {
+        parent: root.parent
+        x: root.x + root.width / 2
+        y: root.y + root.height
+        width: 1
+        height: Math.max(0, root.boundsHeight - root.y - root.height)
+        color: "#39a7ff"
+        visible: root.overlayVisible && height > 0
+        z: 4100
+    }
+
+    DistanceLabel {
+        parent: root.parent
+        x: Math.max(2, root.x + root.width / 2 + 4)
+        y: Math.min(root.boundsHeight - height - 2,
+                    root.y + root.height + (root.boundsHeight - root.y - root.height) / 2 - height / 2)
+        labelText: Math.round(root.boundsHeight - root.y - root.height).toString()
     }
 
     component ResizeHandle: Rectangle {
@@ -113,7 +226,7 @@ Item {
         color: "#ffffff"
         border.color: "#1e9bff"
         border.width: 1
-        visible: root.selected
+        visible: root.overlayVisible
         z: 1000
 
         MouseArea {
@@ -137,6 +250,7 @@ Item {
             property real startMouseY
 
             onPressed: function(mouse) {
+                root.geometryEditing = true
                 startWidth = root.width
                 startHeight = root.height
                 startX = root.x
@@ -172,7 +286,12 @@ Item {
                 root.y = Math.max(0, Math.min(root.y, root.boundsHeight - root.height))
             }
 
-            onReleased: root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
+            onReleased: {
+                root.geometryCommitted(root.widgetId, root.x, root.y, root.width, root.height)
+                root.geometryEditing = false
+            }
+
+            onCanceled: root.geometryEditing = false
         }
     }
 

@@ -32,32 +32,33 @@ WidgetDescriptor WidgetFactory::createDescriptor(const QString& typeId,
 void WidgetFactory::completeDescriptor(WidgetDescriptor& descriptor)
 {
     const QString& typeId = descriptor.typeId;
+    const QString iconRoot = QStringLiteral("qrc:/qt/qml/EverSightDesigner/src/qml/editor/palette/assets/icons/");
 
-    if (typeId == "Image") descriptor.iconSource = "assets/icons/Image.png";
-    else if (typeId == "MultipleImages") descriptor.iconSource = "assets/icons/Multiple Images.png";
-    else if (typeId == "StaticImage") descriptor.iconSource = "assets/icons/Image.png";
-    else if (typeId == "RunControl") descriptor.iconSource = "assets/icons/Run Control.png";
-    else if (typeId == "RunStatus") descriptor.iconSource = "assets/icons/Run Status.png";
-    else if (typeId == "OKNG") descriptor.iconSource = "assets/icons/OK&NG.png";
-    else if (typeId == "Textbox") descriptor.iconSource = "assets/icons/Textbox.png";
-    else if (typeId == "Button") descriptor.iconSource = "assets/icons/Button.png";
-    else if (typeId == "SwitchControl") descriptor.iconSource = "assets/icons/Button.png";
-    else if (typeId == "ParamsSettings") descriptor.iconSource = "assets/icons/Params Settings.png";
-    else if (typeId == "VariableSettings") descriptor.iconSource = "assets/icons/Variable Settings.png";
-    else if (typeId == "CharacterSettings") descriptor.iconSource = "assets/icons/Character Settings.png";
-    else if (typeId == "TrafficLight") descriptor.iconSource = "assets/icons/Trafic Light.png";
-    else if (typeId == "ConditionalLight") descriptor.iconSource = "assets/icons/Conditional Light.png";
-    else if (typeId == "GroupBox") descriptor.iconSource = "assets/icons/Group Box.png";
-    else if (typeId == "ChildInterface") descriptor.iconSource = "assets/icons/Child Interface.png";
-    else if (typeId == "TabControl") descriptor.iconSource = "assets/icons/Tab Control.png";
-    else if (typeId == "Table") descriptor.iconSource = "assets/icons/Table.png";
-    else if (typeId == "LineDiagramArray") descriptor.iconSource = "assets/icons/Line Diagram Array.png";
-    else if (typeId == "MultiLineDiagram") descriptor.iconSource = "assets/icons/Multi Line Diagram.png";
-    else if (typeId == "ProductionStatistics") descriptor.iconSource = "assets/icons/Production Statistics.png";
-    else if (typeId == "PieControl") descriptor.iconSource = "assets/icons/Pie Control.png";
-    else if (typeId == "ParamSettingsArray") descriptor.iconSource = "assets/icons/Param Settings Array.png";
-    else if (typeId == "LabelArray") descriptor.iconSource = "assets/icons/Label Array.png";
-    else descriptor.iconSource = "assets/icons/Image.png";
+    if (typeId == "Image") descriptor.iconSource = iconRoot + "Image.png";
+    else if (typeId == "MultipleImages") descriptor.iconSource = iconRoot + "Multiple Images.png";
+    else if (typeId == "StaticImage") descriptor.iconSource = iconRoot + "Image.png";
+    else if (typeId == "RunControl") descriptor.iconSource = iconRoot + "Run Control.png";
+    else if (typeId == "RunStatus") descriptor.iconSource = iconRoot + "Run Status.png";
+    else if (typeId == "OKNG") descriptor.iconSource = iconRoot + "OK&NG.png";
+    else if (typeId == "Textbox") descriptor.iconSource = iconRoot + "Textbox.png";
+    else if (typeId == "Button") descriptor.iconSource = iconRoot + "Button.png";
+    else if (typeId == "SwitchControl") descriptor.iconSource = iconRoot + "Switch Control.png";
+    else if (typeId == "ParamsSettings") descriptor.iconSource = iconRoot + "Params Settings.png";
+    else if (typeId == "VariableSettings") descriptor.iconSource = iconRoot + "Variable Settings.png";
+    else if (typeId == "CharacterSettings") descriptor.iconSource = iconRoot + "Character Settings.png";
+    else if (typeId == "TrafficLight") descriptor.iconSource = iconRoot + "Trafic Light.png";
+    else if (typeId == "ConditionalLight") descriptor.iconSource = iconRoot + "Conditional Light.png";
+    else if (typeId == "GroupBox") descriptor.iconSource = iconRoot + "Group Box.png";
+    else if (typeId == "ChildInterface") descriptor.iconSource = iconRoot + "Child Interface.png";
+    else if (typeId == "TabControl") descriptor.iconSource = iconRoot + "Tab Control.png";
+    else if (typeId == "Table") descriptor.iconSource = iconRoot + "Table.png";
+    else if (typeId == "LineDiagramArray") descriptor.iconSource = iconRoot + "Line Diagram Array.png";
+    else if (typeId == "MultiLineDiagram") descriptor.iconSource = iconRoot + "Multi Line Diagram.png";
+    else if (typeId == "ProductionStatistics") descriptor.iconSource = iconRoot + "Production Statistics.png";
+    else if (typeId == "PieControl") descriptor.iconSource = iconRoot + "Pie Control.png";
+    else if (typeId == "ParamSettingsArray") descriptor.iconSource = iconRoot + "Param Settings Array.png";
+    else if (typeId == "LabelArray") descriptor.iconSource = iconRoot + "Label Array.png";
+    else descriptor.iconSource = iconRoot + "Image.png";
 
     descriptor.componentSource = "widgets/PlaceholderWidget.qml";
     if (typeId == "Image" || typeId == "MultipleImages")

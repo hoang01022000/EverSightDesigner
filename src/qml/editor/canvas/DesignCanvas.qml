@@ -16,6 +16,13 @@ Item {
     property real activeRatioX: 0
     property real activeRatioY: 0
 
+    Behavior on zoom {
+        NumberAnimation {
+            duration: 120
+            easing.type: Easing.OutCubic
+        }
+    }
+
     function cellAt(localX, localY) {
         var cells = canvasViewModel.layoutCells
         var normalizedX = localX / root.designWidth
@@ -64,6 +71,15 @@ Item {
         contentHeight: Math.max(height, stageFrame.height * root.zoom + root.viewportVerticalPadding)
         clip: true
 
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onClicked: {
+                canvasViewModel.clearSelection()
+                canvasViewModel.clearLayoutCellSelection()
+            }
+        }
+
         Item {
             id: zoomLayer
             x: Math.max(root.viewportHorizontalPadding / 2,
@@ -80,8 +96,8 @@ Item {
                 width: root.designWidth
                 height: root.designHeight
                 color: "#202225"
-                border.color: "#ff7a00"
-                border.width: 2
+                border.color: "#68727b"
+                border.width: 1
 
                 WorkspaceTopBar {
                     id: workspaceTopBar
@@ -109,20 +125,6 @@ Item {
                             ctx.clearRect(0, 0, width, height)
                             ctx.fillStyle = "#232526"
                             ctx.fillRect(0, 0, width, height)
-                            ctx.strokeStyle = "#363b40"
-                            ctx.lineWidth = 1
-                            for (var x = 0; x < width; x += 20) {
-                                ctx.beginPath()
-                                ctx.moveTo(x, 0)
-                                ctx.lineTo(x, height)
-                                ctx.stroke()
-                            }
-                            for (var y = 0; y < height; y += 20) {
-                                ctx.beginPath()
-                                ctx.moveTo(0, y)
-                                ctx.lineTo(width, y)
-                                ctx.stroke()
-                            }
                         }
                     }
 
@@ -195,9 +197,10 @@ Item {
                                 anchors.fill: parent
                                 color: "transparent"
                                 border.color: cell.selected || dropArea.containsDrag ? "#ff9a2c"
-                                                   : (regionContainer.hovered ? "#7b858e" : "#4d555c")
+                                                   : (regionContainer.hovered ? "#9aa4ad" : "#68727b")
                                 border.width: cell.selected || dropArea.containsDrag ? 2
-                                             : (regionContainer.hovered ? 1 : 1)
+                                             : (regionContainer.hovered ? 2 : 1)
+                                z: 1
                             }
 
                             HoverHandler {
@@ -223,7 +226,7 @@ Item {
                                 text: "Region " + cell.id
                                 color: "#c8d0d8"
                                 font.pixelSize: 11
-                                visible: parent.width > 92 && parent.height > 38
+                                visible: false
                             }
 
                             DropArea {
@@ -251,6 +254,8 @@ Item {
                                 model: canvasViewModel
 
                                 delegate: WidgetNode {
+                                    id: widgetNode
+
                                     visible: model.widgetParentRegionId === regionContainer.cell.id
                                     widgetId: model.widgetId
                                     widgetType: model.widgetType
@@ -261,14 +266,42 @@ Item {
                                     componentSource: model.widgetComponentSource
                                     selected: model.widgetSelected
 
-                                    x: model.widgetX
-                                    y: model.widgetY
-                                    width: model.widgetWidth
-                                    height: model.widgetHeight
-                                    z: model.widgetSelected ? 100 : 30
+                                    z: 100 + index
 
                                     boundsWidth: regionContainer.width
                                     boundsHeight: regionContainer.height
+
+                                    Binding {
+                                        target: widgetNode
+                                        property: "x"
+                                        value: model.widgetX
+                                        when: !widgetNode.geometryEditing
+                                        restoreMode: Binding.RestoreNone
+                                    }
+
+                                    Binding {
+                                        target: widgetNode
+                                        property: "y"
+                                        value: model.widgetY
+                                        when: !widgetNode.geometryEditing
+                                        restoreMode: Binding.RestoreNone
+                                    }
+
+                                    Binding {
+                                        target: widgetNode
+                                        property: "width"
+                                        value: model.widgetWidth
+                                        when: !widgetNode.geometryEditing
+                                        restoreMode: Binding.RestoreNone
+                                    }
+
+                                    Binding {
+                                        target: widgetNode
+                                        property: "height"
+                                        value: model.widgetHeight
+                                        when: !widgetNode.geometryEditing
+                                        restoreMode: Binding.RestoreNone
+                                    }
 
                                     onSelectedRequested: function(id, additive) {
                                         canvasViewModel.selectWidget(id, additive)
@@ -426,53 +459,6 @@ Item {
                         }
                     }
 
-                    Rectangle {
-                        id: topRuler
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        height: 14
-                        color: "#1f2327"
-                        opacity: 0.92
-                        z: 6500
-
-                        DragHandler {
-                            id: topRulerDrag
-                            target: null
-                            acceptedButtons: Qt.LeftButton
-                            onActiveChanged: {
-                                if (!active) {
-                                    var point = topRuler.mapToItem(designStage, centroid.position.x, centroid.position.y)
-                                    if (point.y >= 0 && point.y <= designStage.height)
-                                        canvasViewModel.splitCellAt("vertical", point.x / designStage.width, point.y / designStage.height)
-                                }
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        id: leftRuler
-                        anchors.left: parent.left
-                        anchors.top: parent.top
-                        anchors.bottom: parent.bottom
-                        width: 14
-                        color: "#1f2327"
-                        opacity: 0.92
-                        z: 6500
-
-                        DragHandler {
-                            id: leftRulerDrag
-                            target: null
-                            acceptedButtons: Qt.LeftButton
-                            onActiveChanged: {
-                                if (!active) {
-                                    var point = leftRuler.mapToItem(designStage, centroid.position.x, centroid.position.y)
-                                    if (point.x >= 0 && point.x <= designStage.width)
-                                        canvasViewModel.splitCellAt("horizontal", point.x / designStage.width, point.y / designStage.height)
-                                }
-                            }
-                        }
-                    }
                 }
 
                 WorkspaceStatusBar {
