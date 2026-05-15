@@ -66,6 +66,7 @@ Item {
         anchors.fill: parent
         drag.target: root
         drag.threshold: 8
+        preventStealing: true
 
         onPressed: function(mouse) {
             root.geometryEditing = true
@@ -232,6 +233,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             anchors.margins: -5
+            preventStealing: true
             cursorShape: {
                 if (handlePos === 0 || handlePos === 4)
                     return Qt.SizeFDiagCursor
@@ -255,30 +257,32 @@ Item {
                 startHeight = root.height
                 startX = root.x
                 startY = root.y
-                startMouseX = mouse.x
-                startMouseY = mouse.y
+                const startPoint = mapToItem(root.parent, mouse.x, mouse.y)
+                startMouseX = startPoint.x
+                startMouseY = startPoint.y
                 root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
             }
 
             onPositionChanged: function(mouse) {
-                const dx = mouse.x - startMouseX
-                const dy = mouse.y - startMouseY
+                const currentPoint = mapToItem(root.parent, mouse.x, mouse.y)
+                const dx = currentPoint.x - startMouseX
+                const dy = currentPoint.y - startMouseY
 
                 if (handlePos <= 2) {
-                    const newHeight = Math.max(20, startHeight - dy)
+                    const newHeight = Math.max(24, startHeight - dy)
                     root.y = startY + (startHeight - newHeight)
                     root.height = newHeight
                 }
                 if (handlePos >= 4 && handlePos <= 6) {
-                    root.height = Math.max(20, startHeight + dy)
+                    root.height = Math.max(24, startHeight + dy)
                 }
                 if (handlePos === 0 || handlePos === 7 || handlePos === 6) {
-                    const newWidth = Math.max(20, startWidth - dx)
+                    const newWidth = Math.max(24, startWidth - dx)
                     root.x = startX + (startWidth - newWidth)
                     root.width = newWidth
                 }
                 if (handlePos >= 2 && handlePos <= 4) {
-                    root.width = Math.max(20, startWidth + dx)
+                    root.width = Math.max(24, startWidth + dx)
                 }
                 root.width = Math.min(root.width, root.boundsWidth)
                 root.height = Math.min(root.height, root.boundsHeight)
