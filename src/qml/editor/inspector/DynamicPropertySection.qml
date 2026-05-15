@@ -93,6 +93,10 @@ ColumnLayout {
                 RowLayout {
                     ColorSwatch {
                         swatchColor: colorField.text
+                        onColorPicked: function(color) {
+                            colorField.text = color
+                            canvasViewModel.updateSelectedProperty(propertyEditor.propertyKey, color)
+                        }
                     }
                     TextField {
                         id: colorField

@@ -10,7 +10,7 @@ ColumnLayout {
     IdentitySection {}
     InspectorDivider {}
     DataSourceSection {}
-    InspectorDivider {}
+    InspectorDivider { visible: canvasViewModel.selectedWidgetHasDataSource }
     LayoutSection {}
     InspectorDivider {}
     AppearanceSection {}

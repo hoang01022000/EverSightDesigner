@@ -1263,6 +1263,70 @@ void CanvasViewModel::updateSelectedAppearance(const QString& buttonColor, const
     emit selectedWidgetChanged();
 }
 
+QString CanvasViewModel::selectedAppearanceValue(const QString& key) const
+{
+    const WidgetItem* w = selectedWidget();
+    if (!w) return {};
+
+    if (key == QStringLiteral("background") || key == QStringLiteral("buttonColor"))
+        return w->buttonColor;
+    if (key == QStringLiteral("border") || key == QStringLiteral("borderColor"))
+        return w->borderColor;
+    if (key == QStringLiteral("font") || key == QStringLiteral("iconColor") || key == QStringLiteral("textColor"))
+        return w->iconColor;
+    return w->properties.value(key).toString();
+}
+
+void CanvasViewModel::updateSelectedAppearanceField(const QString& key, const QString& value)
+{
+    const int row = indexOfWidget(m_selectedWidgetId);
+    if (row < 0 || key.isEmpty())
+        return;
+
+    WidgetItem& widget = m_widgets[row];
+    QList<int> roles;
+    bool changed = false;
+
+    if (key == QStringLiteral("background") || key == QStringLiteral("buttonColor")) {
+        if (widget.buttonColor == value)
+            return;
+        pushUndoState();
+        widget.buttonColor = value;
+        widget.properties.insert(QStringLiteral("background"), value);
+        roles.append(ButtonColorRole);
+        changed = true;
+    } else if (key == QStringLiteral("border") || key == QStringLiteral("borderColor")) {
+        if (widget.borderColor == value)
+            return;
+        pushUndoState();
+        widget.borderColor = value;
+        widget.properties.insert(QStringLiteral("border"), value);
+        roles.append(BorderColorRole);
+        changed = true;
+    } else if (key == QStringLiteral("font") || key == QStringLiteral("iconColor") || key == QStringLiteral("textColor")) {
+        if (widget.iconColor == value)
+            return;
+        pushUndoState();
+        widget.iconColor = value;
+        widget.properties.insert(QStringLiteral("iconColor"), value);
+        roles.append(IconColorRole);
+        changed = true;
+    } else {
+        if (widget.properties.value(key).toString() == value)
+            return;
+        pushUndoState();
+        widget.properties.insert(key, value);
+        changed = true;
+    }
+
+    if (!changed)
+        return;
+
+    if (!roles.isEmpty())
+        emit dataChanged(index(row, 0), index(row, 0), roles);
+    emit selectedWidgetChanged();
+}
+
 void CanvasViewModel::updateSelectedAutoFill(bool autoFill)
 {
     const int row = indexOfWidget(m_selectedWidgetId);
@@ -1473,6 +1537,44 @@ QVariantList CanvasViewModel::selectedPropertyDefinitions() const
 
     const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w->type);
     return desc ? desc->propertyDefinitions : QVariantList{};
+}
+
+bool CanvasViewModel::selectedWidgetHasDataSource() const
+{
+    const WidgetItem* w = selectedWidget();
+    if (!w) return false;
+
+    const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w->type);
+    return desc ? desc->hasDataSource : false;
+}
+
+QVariantList CanvasViewModel::selectedAppearanceFields() const
+{
+    const WidgetItem* w = selectedWidget();
+    if (!w) return {};
+
+    const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w->type);
+    if (!desc)
+        return {};
+
+    QVariantList fields;
+    for (const QVariant& value : desc->appearanceFields) {
+        QVariantMap field = value.toMap();
+        const QString key = field.value(QStringLiteral("key")).toString();
+        field.insert(QStringLiteral("value"), selectedAppearanceValue(key));
+        fields.append(field);
+    }
+    return fields;
+}
+
+qreal CanvasViewModel::canvasWidth() const
+{
+    return DESIGN_WIDTH;
+}
+
+qreal CanvasViewModel::canvasHeight() const
+{
+    return EDITABLE_HEIGHT;
 }
 
 QVariantList CanvasViewModel::layoutCells() const

@@ -15,7 +15,9 @@ struct WidgetDescriptor
     QString        iconSource;
     QString        componentSource;
     QVariantList   propertyDefinitions;
+    QVariantList   appearanceFields;
     WidgetCategory category = WidgetCategory::Foundation;
+    bool           hasDataSource = false;
 
     qreal   defaultWidth  = 160.0;
     qreal   defaultHeight = 92.0;

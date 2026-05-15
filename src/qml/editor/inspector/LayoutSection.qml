@@ -104,12 +104,12 @@ ColumnLayout {
                 Layout.preferredWidth: 80
             }
 
-            Button { text: "L"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("left", 1280, 654) }
-            Button { text: "C"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("hcenter", 1280, 654) }
-            Button { text: "R"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("right", 1280, 654) }
-            Button { text: "T"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("top", 1280, 654) }
-            Button { text: "M"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("vcenter", 1280, 654) }
-            Button { text: "B"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("bottom", 1280, 654) }
+            Button { text: "L"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("left", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
+            Button { text: "C"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("hcenter", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
+            Button { text: "R"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("right", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
+            Button { text: "T"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("top", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
+            Button { text: "M"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("vcenter", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
+            Button { text: "B"; Layout.fillWidth: true; onClicked: canvasViewModel.alignSelected("bottom", canvasViewModel.canvasWidth, canvasViewModel.canvasHeight) }
         }
     }
 }

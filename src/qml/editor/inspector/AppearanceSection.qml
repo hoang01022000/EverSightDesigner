@@ -1,3 +1,4 @@
+import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -6,15 +7,7 @@ ColumnLayout {
 
     Layout.fillWidth: true
     spacing: 10
-
-    function commitAppearance() {
-        if (!canvasViewModel.hasSelection)
-            return
-
-        canvasViewModel.updateSelectedAppearance(buttonColorField.text,
-                                                 borderColorField.text,
-                                                 iconColorField.text)
-    }
+    visible: canvasViewModel.selectedAppearanceFields.length > 0
 
     InspectorSectionHeader { text: "Appearance" }
 
@@ -24,45 +17,38 @@ ColumnLayout {
         Layout.rightMargin: 16
         spacing: 10
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
+        Repeater {
+            model: canvasViewModel.selectedAppearanceFields
 
-            Label { text: "Background"; color: "#555b62"; font.pixelSize: 14; Layout.preferredWidth: 80 }
-            ColorSwatch { swatchColor: buttonColorField.text }
-            TextField {
-                id: buttonColorField
+            delegate: RowLayout {
+                required property var modelData
+
                 Layout.fillWidth: true
-                text: canvasViewModel.selectedButtonColor
-                onEditingFinished: root.commitAppearance()
-            }
-        }
+                spacing: 12
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
+                Label {
+                    text: modelData.label
+                    color: "#555b62"
+                    font.pixelSize: 14
+                    Layout.preferredWidth: 92
+                    elide: Text.ElideRight
+                }
 
-            Label { text: "Border Color"; color: "#555b62"; font.pixelSize: 14; Layout.preferredWidth: 80 }
-            ColorSwatch { swatchColor: borderColorField.text }
-            TextField {
-                id: borderColorField
-                Layout.fillWidth: true
-                text: canvasViewModel.selectedBorderColor
-                onEditingFinished: root.commitAppearance()
-            }
-        }
+                ColorSwatch {
+                    swatchColor: valueField.text
+                    onColorPicked: function(color) {
+                        valueField.text = color
+                        canvasViewModel.updateSelectedAppearanceField(modelData.key, color)
+                    }
+                }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Label { text: "Icon Color"; color: "#555b62"; font.pixelSize: 14; Layout.preferredWidth: 80 }
-            ColorSwatch { swatchColor: iconColorField.text }
-            TextField {
-                id: iconColorField
-                Layout.fillWidth: true
-                text: canvasViewModel.selectedIconColor
-                onEditingFinished: root.commitAppearance()
+                TextField {
+                    id: valueField
+                    Layout.fillWidth: true
+                    text: modelData.value
+                    selectByMouse: true
+                    onEditingFinished: canvasViewModel.updateSelectedAppearanceField(modelData.key, text)
+                }
             }
         }
     }

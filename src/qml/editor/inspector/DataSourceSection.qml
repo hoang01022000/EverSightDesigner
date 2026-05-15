@@ -7,6 +7,7 @@ ColumnLayout {
 
     Layout.fillWidth: true
     spacing: 10
+    visible: canvasViewModel.selectedWidgetHasDataSource
 
     function syncFields() {
         dataSourceBox.currentIndex = Math.max(0, dataSourceBox.indexOfValue(canvasViewModel.selectedDataSource))

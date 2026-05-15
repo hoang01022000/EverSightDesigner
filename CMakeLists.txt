@@ -25,7 +25,7 @@ set(EDITOR_QML_FILES
     src/qml/editor/inspector/InspectorPanel.qml
     src/qml/editor/inspector/AppearanceSection.qml
     src/qml/editor/inspector/BaseSettingsSection.qml
-    src/qml/editor/inspector/CanvasLayoutSection.qml
+    src/qml/editor/inspector/ColorPickerPopup.qml
     src/qml/editor/inspector/ColorSwatch.qml
     src/qml/editor/inspector/DataSourceSection.qml
     src/qml/editor/inspector/DynamicPropertySection.qml
@@ -71,10 +71,6 @@ target_sources(appEverSightDesigner PRIVATE
     src/shared/enums/WidgetCategory.h
     src/editor/registry/WidgetDescriptor.h
     src/editor/registry/WidgetTypeDescriptor.h
-    src/editor/registry/PropertyDefinition.h
-    src/editor/registry/PropertyDefinition.cpp
-    src/editor/registry/WidgetFactory.h
-    src/editor/registry/WidgetFactory.cpp
     src/editor/registry/WidgetTypeRegistry.h
     src/editor/registry/WidgetTypeRegistry.cpp
     src/editor/registry/WidgetPaletteModel.h

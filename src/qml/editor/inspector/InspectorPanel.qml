@@ -52,7 +52,6 @@ Rectangle {
                 spacing: 10
 
                 LayoutSplitStyleSection {
-                    visible: canvasViewModel.inspectorMode === "container"
                 }
 
                 BaseSettingsSection {

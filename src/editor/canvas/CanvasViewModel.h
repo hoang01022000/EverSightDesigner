@@ -31,6 +31,10 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(bool    canUndo              READ canUndo              NOTIFY undoRedoChanged)
     Q_PROPERTY(bool    canRedo              READ canRedo              NOTIFY undoRedoChanged)
     Q_PROPERTY(QVariantList selectedPropertyDefinitions READ selectedPropertyDefinitions NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(bool selectedWidgetHasDataSource READ selectedWidgetHasDataSource NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(QVariantList selectedAppearanceFields READ selectedAppearanceFields NOTIFY selectedWidgetChanged)
+    Q_PROPERTY(qreal canvasWidth READ canvasWidth CONSTANT)
+    Q_PROPERTY(qreal canvasHeight READ canvasHeight CONSTANT)
     Q_PROPERTY(int     currentBasicLayout   READ currentBasicLayout   NOTIFY layoutChanged)
     Q_PROPERTY(int     currentSplitTemplate READ currentSplitTemplate NOTIFY layoutChanged)
     Q_PROPERTY(int     currentCustomRows READ currentCustomRows NOTIFY layoutChanged)
@@ -81,6 +85,8 @@ public:
     Q_INVOKABLE void updateSelectedTitle(const QString& title);
     Q_INVOKABLE void updateSelectedData(const QString& dataSource, const QString& controlType);
     Q_INVOKABLE void updateSelectedAppearance(const QString& buttonColor, const QString& borderColor, const QString& iconColor);
+    Q_INVOKABLE QString selectedAppearanceValue(const QString& key) const;
+    Q_INVOKABLE void updateSelectedAppearanceField(const QString& key, const QString& value);
     Q_INVOKABLE void updateSelectedAutoFill(bool autoFill);
     Q_INVOKABLE QVariant selectedPropertyValue(const QString& key) const;
     Q_INVOKABLE void updateSelectedProperty(const QString& key, const QVariant& value);
@@ -163,6 +169,10 @@ public:
     bool    canUndo()              const;
     bool    canRedo()              const;
     QVariantList selectedPropertyDefinitions() const;
+    bool selectedWidgetHasDataSource() const;
+    QVariantList selectedAppearanceFields() const;
+    qreal canvasWidth() const;
+    qreal canvasHeight() const;
     QVariantList layoutCells() const;
     QVariantList layoutResizeHandles() const;
     int selectedLayoutCellId() const;
