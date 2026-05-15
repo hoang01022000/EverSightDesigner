@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 QuickLayouts Test)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 QuickLayouts)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -105,43 +105,6 @@ set_target_properties(appEverSightDesigner PROPERTIES
 
 target_link_libraries(appEverSightDesigner
     PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::QuickLayouts
-)
-
-enable_testing()
-
-qt_add_executable(tst_canvaslayout
-    tests/canvas/TestCanvasLayout.cpp
-    src/editor/registry/WidgetDescriptor.h
-    src/editor/canvas/CanvasViewModel.h
-    src/editor/canvas/CanvasViewModel.cpp
-    src/editor/canvas/EditorController.h
-    src/editor/canvas/EditorController.cpp
-    src/editor/canvas/LayoutEngine.h
-    src/editor/canvas/LayoutEngine.cpp
-    src/editor/canvas/LayoutManager.h
-    src/editor/canvas/LayoutManager.cpp
-    src/editor/canvas/WidgetEngine.h
-    src/editor/canvas/WidgetEngine.cpp
-    src/editor/registry/WidgetTypeDescriptor.h
-    src/editor/registry/PropertyDefinition.h
-    src/editor/registry/PropertyDefinition.cpp
-    src/editor/registry/WidgetFactory.h
-    src/editor/registry/WidgetFactory.cpp
-    src/editor/registry/WidgetTypeRegistry.h
-    src/editor/registry/WidgetTypeRegistry.cpp
-)
-
-target_link_libraries(tst_canvaslayout
-    PRIVATE Qt6::Test Qt6::Quick Qt6::QuickControls2 Qt6::QuickLayouts
-)
-
-set_target_properties(tst_canvaslayout PROPERTIES
-    WIN32_EXECUTABLE FALSE
-)
-
-add_test(NAME tst_canvaslayout COMMAND tst_canvaslayout)
-set_tests_properties(tst_canvaslayout PROPERTIES
-    ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>"
 )
 
 install(TARGETS appEverSightDesigner

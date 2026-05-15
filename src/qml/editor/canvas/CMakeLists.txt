@@ -8,7 +8,6 @@ set(CANVAS_QML_FILES
     src/qml/editor/canvas/WorkspaceStatusBar.qml
     src/qml/editor/canvas/WidgetNode.qml
     src/qml/editor/canvas/SplitterHandle.qml
-    src/qml/editor/canvas/CanvasArea.qml
     ${CANVAS_WIDGETS_QML_FILES}
     PARENT_SCOPE
 )
