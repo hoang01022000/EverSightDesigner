@@ -205,6 +205,10 @@ void CanvasViewModel::setSplitTemplate(int tmpl)
     if (!layout) return;
 
     setLayoutTemplate(*layout, qBound(1, tmpl, 7));
+    if (!layout->root.children.isEmpty())
+        layout->selectedCellIds = { layout->root.children.first().id };
+    else
+        layout->selectedCellIds = { layout->root.id };
     emit layoutChanged();
 }
 

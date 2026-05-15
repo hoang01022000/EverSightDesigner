@@ -112,11 +112,21 @@ Item {
                 Item {
                     id: designStage
                     objectName: "DesignCanvasStage"
+                    property var layoutCells: canvasViewModel.layoutCells
+                    property var layoutResizeHandles: canvasViewModel.layoutResizeHandles
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
                     anchors.bottom: workspaceStatusBar.top
                     clip: true
+
+                    function cellById(cellId) {
+                        for (var i = 0; i < layoutCells.length; ++i) {
+                            if (layoutCells[i].id === cellId)
+                                return layoutCells[i]
+                        }
+                        return null
+                    }
 
                     Canvas {
                         anchors.fill: parent
@@ -177,13 +187,13 @@ Item {
                     }
 
                     Repeater {
-                        model: canvasViewModel.layoutCells.length
+                        model: designStage.layoutCells.length
 
                         delegate: Item {
                             id: regionContainer
 
                             required property int index
-                            readonly property var cell: canvasViewModel.layoutCells[index]
+                            readonly property var cell: designStage.layoutCells[index]
                             property bool hovered: false
 
                             x: cell.x * designStage.width
@@ -250,77 +260,86 @@ Item {
                                 }
                             }
 
-                            Repeater {
-                                model: canvasViewModel
+                        }
+                    }
 
-                                delegate: WidgetNode {
-                                    id: widgetNode
+                    Repeater {
+                        model: canvasViewModel
 
-                                    visible: model.widgetParentRegionId === regionContainer.cell.id
-                                    widgetId: model.widgetId
-                                    widgetType: model.widgetType
-                                    widgetTitle: model.widgetTitle
-                                    buttonColor: model.widgetButtonColor
-                                    borderColorValue: model.widgetBorderColor
-                                    iconColor: model.widgetIconColor
-                                    componentSource: model.widgetComponentSource
-                                    selected: model.widgetSelected
+                        delegate: WidgetNode {
+                            id: widgetNode
 
-                                    z: 100 + index
+                            readonly property var widgetCell: designStage.cellById(model.widgetParentRegionId)
+                            readonly property real regionX: widgetCell ? widgetCell.x * designStage.width : 0
+                            readonly property real regionY: widgetCell ? widgetCell.y * designStage.height : 0
+                            readonly property real regionWidth: widgetCell ? widgetCell.width * designStage.width : designStage.width
+                            readonly property real regionHeight: widgetCell ? widgetCell.height * designStage.height : designStage.height
 
-                                    boundsWidth: regionContainer.width
-                                    boundsHeight: regionContainer.height
+                            visible: widgetCell !== null
+                            widgetId: model.widgetId
+                            widgetType: model.widgetType
+                            widgetTitle: model.widgetTitle
+                            buttonColor: model.widgetButtonColor
+                            borderColorValue: model.widgetBorderColor
+                            iconColor: model.widgetIconColor
+                            componentSource: model.widgetComponentSource
+                            selected: model.widgetSelected
 
-                                    Binding {
-                                        target: widgetNode
-                                        property: "x"
-                                        value: model.widgetX
-                                        when: !widgetNode.geometryEditing
-                                        restoreMode: Binding.RestoreNone
-                                    }
+                            z: 1000 + index
 
-                                    Binding {
-                                        target: widgetNode
-                                        property: "y"
-                                        value: model.widgetY
-                                        when: !widgetNode.geometryEditing
-                                        restoreMode: Binding.RestoreNone
-                                    }
+                            boundsX: regionX
+                            boundsY: regionY
+                            boundsWidth: regionWidth
+                            boundsHeight: regionHeight
 
-                                    Binding {
-                                        target: widgetNode
-                                        property: "width"
-                                        value: model.widgetWidth
-                                        when: !widgetNode.geometryEditing
-                                        restoreMode: Binding.RestoreNone
-                                    }
+                            Binding {
+                                target: widgetNode
+                                property: "x"
+                                value: widgetNode.regionX + model.widgetX
+                                when: !widgetNode.geometryEditing
+                                restoreMode: Binding.RestoreNone
+                            }
 
-                                    Binding {
-                                        target: widgetNode
-                                        property: "height"
-                                        value: model.widgetHeight
-                                        when: !widgetNode.geometryEditing
-                                        restoreMode: Binding.RestoreNone
-                                    }
+                            Binding {
+                                target: widgetNode
+                                property: "y"
+                                value: widgetNode.regionY + model.widgetY
+                                when: !widgetNode.geometryEditing
+                                restoreMode: Binding.RestoreNone
+                            }
 
-                                    onSelectedRequested: function(id, additive) {
-                                        canvasViewModel.selectWidget(id, additive)
-                                    }
+                            Binding {
+                                target: widgetNode
+                                property: "width"
+                                value: model.widgetWidth
+                                when: !widgetNode.geometryEditing
+                                restoreMode: Binding.RestoreNone
+                            }
 
-                                    onGeometryCommitted: function(id, newX, newY, newWidth, newHeight) {
-                                        canvasViewModel.updateWidgetGeometry(id, newX, newY, newWidth, newHeight)
-                                    }
-                                }
+                            Binding {
+                                target: widgetNode
+                                property: "height"
+                                value: model.widgetHeight
+                                when: !widgetNode.geometryEditing
+                                restoreMode: Binding.RestoreNone
+                            }
+
+                            onSelectedRequested: function(id, additive) {
+                                canvasViewModel.selectWidget(id, additive)
+                            }
+
+                            onGeometryCommitted: function(id, newX, newY, newWidth, newHeight) {
+                                canvasViewModel.updateWidgetGeometry(id, newX, newY, newWidth, newHeight)
                             }
                         }
                     }
 
                     Repeater {
-                        model: canvasViewModel.layoutResizeHandles.length
+                        model: designStage.layoutResizeHandles.length
 
                         delegate: SplitterHandle {
                             required property int index
-                            readonly property var handle: canvasViewModel.layoutResizeHandles[index]
+                            readonly property var handle: designStage.layoutResizeHandles[index]
 
                             orientation: handle.orientation
                             coordinateItem: designStage
@@ -339,15 +358,16 @@ Item {
                             z: 5000
 
                             onDragged: function(deltaRatio) {
-                                var normalizedDelta = handle.orientation === "vertical"
-                                        ? deltaRatio / handle.parentWidth
-                                        : deltaRatio / handle.parentHeight
+                                var normalizedDelta = deltaRatio
                                 var minFirst = handle.orientation === "vertical"
                                         ? 50 / (handle.parentWidth * designStage.width)
                                         : 50 / (handle.parentHeight * designStage.height)
                                 var minSecond = minFirst
                                 var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, handle.ratio + normalizedDelta))
-                                canvasViewModel.resizeDivider(handle.parentCellId, nextRatio, minFirst, minSecond)
+                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
+                                                                  String(handle.secondCellId),
+                                                                  handle.orientation,
+                                                                  normalizedDelta)
                                 root.activeRatioText = nextRatio.toFixed(2) + "*"
                                 root.activeRatioX = handle.orientation === "vertical" ? handle.x * designStage.width : handle.start * designStage.width
                                 root.activeRatioY = handle.orientation === "vertical" ? 0 : handle.y * designStage.height
@@ -380,11 +400,11 @@ Item {
                     }
 
                     Repeater {
-                        model: canvasViewModel.layoutResizeHandles.length
+                        model: designStage.layoutResizeHandles.length
 
                         delegate: Rectangle {
                             required property int index
-                            readonly property var handle: canvasViewModel.layoutResizeHandles[index]
+                            readonly property var handle: designStage.layoutResizeHandles[index]
 
                             x: handle.orientation === "vertical" ? handle.x * designStage.width - width / 2
                                                                   : handle.x * designStage.width - width / 2

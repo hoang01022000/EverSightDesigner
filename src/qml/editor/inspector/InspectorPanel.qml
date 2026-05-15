@@ -14,16 +14,19 @@ Rectangle {
 
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 46
+            implicitHeight: canvasViewModel.inspectorMode === "widget"
+                            || canvasViewModel.hasSelectedLayoutCell ? 46 : 0
             color: "#f1f1f1"
 
             Label {
                 anchors.left: parent.left
                 anchors.leftMargin: 14
                 anchors.verticalCenter: parent.verticalCenter
+                visible: canvasViewModel.inspectorMode === "widget"
+                         || canvasViewModel.hasSelectedLayoutCell
                 text: canvasViewModel.inspectorMode === "widget"
                       ? "BaseSettings"
-                      : "LayoutSplitStyle"
+                      : (canvasViewModel.hasSelectedLayoutCell ? "LayoutSplitStyle" : "")
                 color: "#2f3338"
                 font.pixelSize: 16
                 font.bold: true
@@ -34,6 +37,8 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: 3
+                visible: canvasViewModel.inspectorMode === "widget"
+                         || canvasViewModel.hasSelectedLayoutCell
                 color: "#ff7a00"
             }
         }
