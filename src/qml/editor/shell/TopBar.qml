@@ -172,37 +172,37 @@ Rectangle {
                 height: parent.height
                 spacing: 5
 
-                IconButton { action: actOpen; iconSource: "assets/icons/Open.png"; fallbackText: "O" }
-                IconButton { action: actSave; iconSource: "assets/icons/Save.png"; fallbackText: "S" }
-                IconButton { action: actTemplateManager; fallbackText: "TM"; glyph: "\u25a3" }
-                IconButton { action: actSaveTemplate; fallbackText: "ST"; glyph: "\u229e" }
+                IconButton { action: actOpen; iconSource: topBarViewModel.openIcon; fallbackText: "O" }
+                IconButton { action: actSave; iconSource: topBarViewModel.saveIcon; fallbackText: "S" }
+                IconButton { action: actTemplateManager; iconSource: topBarViewModel.templateIcon; fallbackText: "TM"; glyph: "\u25a3" }
+                IconButton { action: actSaveTemplate; iconSource: topBarViewModel.saveTemplateIcon; fallbackText: "ST"; glyph: "\u229e" }
 
                 ToolbarDivider {}
 
-                IconButton { action: actBringToFront; iconSource: "assets/icons/toolbarFronted_normal.png"; fallbackText: "FF" }
-                IconButton { action: actBringForward; fallbackText: "F"; glyph: "\u25c6" }
-                IconButton { action: actSendToBack; fallbackText: "BB"; glyph: "\u25c7" }
-                IconButton { action: actSendBackward; fallbackText: "B"; glyph: "\u25c8" }
+                IconButton { action: actBringToFront; iconSource: topBarViewModel.bringToFrontIcon; fallbackText: "FF" }
+                IconButton { action: actBringForward; iconSource: topBarViewModel.bringForwardIcon; fallbackText: "F"; glyph: "\u25c6" }
+                IconButton { action: actSendToBack; iconSource: topBarViewModel.sendToBackIcon; fallbackText: "BB"; glyph: "\u25c7" }
+                IconButton { action: actSendBackward; iconSource: topBarViewModel.sendBackwardIcon; fallbackText: "B"; glyph: "\u25c8" }
 
                 ToolbarDivider {}
 
-                IconButton { action: actAlignLeft; fallbackText: "L"; glyph: "\u22a2" }
-                IconButton { action: actAlignCenter; fallbackText: "C"; glyph: "\u2261" }
-                IconButton { action: actAlignRight; fallbackText: "R"; glyph: "\u22a3" }
-                IconButton { action: actAlignTop; fallbackText: "T"; glyph: "\u22a4" }
-                IconButton { action: actAlignMiddle; fallbackText: "M"; glyph: "\u2501" }
-                IconButton { action: actAlignBottom; fallbackText: "D"; glyph: "\u22a5" }
+                IconButton { action: actAlignLeft; iconSource: topBarViewModel.alignLeftIcon; fallbackText: "L"; glyph: "\u22a2" }
+                IconButton { action: actAlignCenter; iconSource: topBarViewModel.alignCenterIcon; fallbackText: "C"; glyph: "\u2261" }
+                IconButton { action: actAlignRight; iconSource: topBarViewModel.alignRightIcon; fallbackText: "R"; glyph: "\u22a3" }
+                IconButton { action: actAlignTop; iconSource: topBarViewModel.alignTopIcon; fallbackText: "T"; glyph: "\u22a4" }
+                IconButton { action: actAlignMiddle; iconSource: topBarViewModel.alignMiddleIcon; fallbackText: "M"; glyph: "\u2501" }
+                IconButton { action: actAlignBottom; iconSource: topBarViewModel.alignBottomIcon; fallbackText: "D"; glyph: "\u22a5" }
 
                 ToolbarDivider {}
 
-                IconButton { action: actDistributeH; fallbackText: "DH"; glyph: "\u2194" }
-                IconButton { action: actDistributeV; fallbackText: "DV"; glyph: "\u2195" }
+                IconButton { action: actDistributeH; iconSource: topBarViewModel.distributeHIcon; fallbackText: "DH"; glyph: "\u2194" }
+                IconButton { action: actDistributeV; iconSource: topBarViewModel.distributeVIcon; fallbackText: "DV"; glyph: "\u2195" }
 
                 ToolbarDivider {}
 
-                IconButton { action: actUndo; iconSource: "assets/icons/Undo.png"; fallbackText: "U" }
-                IconButton { action: actRedo; iconSource: "assets/icons/Redo.png"; fallbackText: "R" }
-                IconButton { action: actDelete; iconSource: "assets/icons/Remove.png"; fallbackText: "Del" }
+                IconButton { action: actUndo; iconSource: topBarViewModel.undoIcon; fallbackText: "U" }
+                IconButton { action: actRedo; iconSource: topBarViewModel.redoIcon; fallbackText: "R" }
+                IconButton { action: actDelete; iconSource: topBarViewModel.deleteIcon; fallbackText: "Del" }
                 IconButton { action: actFitToWindow; fallbackText: "Fit"; glyph: "\u25a3" }
 
                 ToolbarDivider {}
@@ -229,10 +229,10 @@ Rectangle {
 
                 ToolbarDivider {}
 
-                IconButton { action: actToggleTop; fallbackText: "Top"; glyph: "\u25ac" }
-                IconButton { action: actToggleBottom; fallbackText: "Bot"; glyph: "\u25ad" }
-                IconButton { action: actToggleLeft; fallbackText: "Left"; glyph: "\u25e7" }
-                IconButton { action: actToggleRight; fallbackText: "Right"; glyph: "\u25e8" }
+                IconButton { action: actToggleTop; iconSource: topBarViewModel.toggleTopIcon; fallbackText: "Top"; glyph: "\u25ac" }
+                IconButton { action: actToggleBottom; iconSource: topBarViewModel.toggleBottomIcon; fallbackText: "Bot"; glyph: "\u25ad" }
+                IconButton { action: actToggleLeft; iconSource: topBarViewModel.toggleLeftIcon; fallbackText: "Left"; glyph: "\u25e7" }
+                IconButton { action: actToggleRight; iconSource: topBarViewModel.toggleRightIcon; fallbackText: "Right"; glyph: "\u25e8" }
 
             }
         }

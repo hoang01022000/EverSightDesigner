@@ -11,7 +11,10 @@ Item {
     readonly property real viewportVerticalPadding: 48
     readonly property real workspaceTopBarHeight: 42
     readonly property real workspaceStatusBarHeight: 24
-    readonly property real editableHeight: designHeight - workspaceTopBarHeight - workspaceStatusBarHeight
+    readonly property real editableHeight: designHeight - workspaceStatusBarHeight
+    property string activeRatioText: ""
+    property real activeRatioX: 0
+    property real activeRatioY: 0
 
     function cellAt(localX, localY) {
         var cells = canvasViewModel.layoutCells
@@ -82,17 +85,20 @@ Item {
 
                 WorkspaceTopBar {
                     id: workspaceTopBar
-                    anchors.left: parent.left
+                    objectName: "CanvasWorkspaceTopBar"
                     anchors.right: parent.right
                     anchors.top: parent.top
+                    width: 132
                     height: root.workspaceTopBarHeight
+                    z: 9000
                 }
 
                 Item {
-                    id: editableArea
+                    id: designStage
+                    objectName: "DesignCanvasStage"
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.top: workspaceTopBar.bottom
+                    anchors.top: parent.top
                     anchors.bottom: workspaceStatusBar.top
                     clip: true
 
@@ -120,17 +126,20 @@ Item {
                         }
                     }
 
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: function(mouse) {
-                            var targetCell = root.cellAt(mouse.x, mouse.y)
-                            if (targetCell)
-                                canvasViewModel.selectLayoutCell(targetCell.id,
-                                                                 (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
-                            else {
-                                canvasViewModel.clearSelection()
-                                canvasViewModel.clearLayoutCellSelection()
-                            }
+                    Menu {
+                        id: cellContextMenu
+
+                        MenuItem {
+                            text: "Merge cells"
+                            enabled: canvasViewModel.hasSelectedLayoutCell
+                            onTriggered: canvasViewModel.mergeSelectedLayoutCells()
+                        }
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: function(eventPoint) {
+                            cellContextMenu.popup(designStage, eventPoint.position.x, eventPoint.position.y)
                         }
                     }
 
@@ -175,10 +184,10 @@ Item {
                             readonly property var cell: canvasViewModel.layoutCells[index]
                             property bool hovered: false
 
-                            x: cell.x * editableArea.width
-                            y: cell.y * editableArea.height
-                            width: cell.width * editableArea.width
-                            height: cell.height * editableArea.height
+                            x: cell.x * designStage.width
+                            y: cell.y * designStage.height
+                            width: cell.width * designStage.width
+                            height: cell.height * designStage.height
                             clip: true
                             z: cell.selected ? 20 : 10
 
@@ -195,10 +204,22 @@ Item {
                                 onHoveredChanged: regionContainer.hovered = hovered
                             }
 
+                            MouseArea {
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton
+                                z: 3
+
+                                onClicked: function(mouse) {
+                                    canvasViewModel.selectLayoutCell(regionContainer.cell.id,
+                                                                     (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
+                                }
+                            }
+
                             Label {
                                 anchors.left: parent.left
                                 anchors.top: parent.top
                                 anchors.margins: 6
+                                z: 6
                                 text: "Region " + cell.id
                                 color: "#c8d0d8"
                                 font.pixelSize: 11
@@ -208,6 +229,7 @@ Item {
                             DropArea {
                                 id: dropArea
                                 anchors.fill: parent
+                                z: 4
                                 keys: ["text/plain", "application/eversight-widget-type"]
 
                                 onDropped: function(drop) {
@@ -268,26 +290,34 @@ Item {
                             readonly property var handle: canvasViewModel.layoutResizeHandles[index]
 
                             orientation: handle.orientation
-                            coordinateItem: editableArea
+                            coordinateItem: designStage
                             x: handle.orientation === "vertical"
-                               ? handle.x * editableArea.width - width / 2
-                               : handle.start * editableArea.width
+                               ? handle.x * designStage.width - width / 2
+                               : handle.start * designStage.width
                             y: handle.orientation === "vertical"
-                               ? handle.start * editableArea.height
-                               : handle.y * editableArea.height - height / 2
+                               ? handle.start * designStage.height
+                               : handle.y * designStage.height - height / 2
                             width: handle.orientation === "vertical"
                                    ? 12
-                                   : Math.max(36, handle.length * editableArea.width)
+                                   : Math.max(36, handle.length * designStage.width)
                             height: handle.orientation === "vertical"
-                                    ? Math.max(36, handle.length * editableArea.height)
+                                    ? Math.max(36, handle.length * designStage.height)
                                     : 12
                             z: 5000
 
                             onDragged: function(deltaRatio) {
-                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
-                                                                  String(handle.secondCellId),
-                                                                  handle.orientation,
-                                                                  deltaRatio)
+                                var normalizedDelta = handle.orientation === "vertical"
+                                        ? deltaRatio / handle.parentWidth
+                                        : deltaRatio / handle.parentHeight
+                                var minFirst = handle.orientation === "vertical"
+                                        ? 50 / (handle.parentWidth * designStage.width)
+                                        : 50 / (handle.parentHeight * designStage.height)
+                                var minSecond = minFirst
+                                var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, handle.ratio + normalizedDelta))
+                                canvasViewModel.resizeDivider(handle.parentCellId, nextRatio, minFirst, minSecond)
+                                root.activeRatioText = nextRatio.toFixed(2) + "*"
+                                root.activeRatioX = handle.orientation === "vertical" ? handle.x * designStage.width : handle.start * designStage.width
+                                root.activeRatioY = handle.orientation === "vertical" ? 0 : handle.y * designStage.height
                             }
 
                             onMergeRequested: {
@@ -296,10 +326,158 @@ Item {
                             }
                         }
                     }
+
+                    Rectangle {
+                        x: root.activeRatioX + 4
+                        y: root.activeRatioY + 4
+                        width: 46
+                        height: 20
+                        radius: 2
+                        color: "#252a2f"
+                        border.color: "#ff9a2c"
+                        visible: root.activeRatioText.length > 0
+                        z: 7000
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.activeRatioText
+                            color: "#f4f6f8"
+                            font.pixelSize: 11
+                        }
+                    }
+
+                    Repeater {
+                        model: canvasViewModel.layoutResizeHandles.length
+
+                        delegate: Rectangle {
+                            required property int index
+                            readonly property var handle: canvasViewModel.layoutResizeHandles[index]
+
+                            x: handle.orientation === "vertical" ? handle.x * designStage.width - width / 2
+                                                                  : handle.x * designStage.width - width / 2
+                            y: handle.orientation === "vertical" ? 2
+                                                                  : handle.y * designStage.height - height / 2
+                            width: 44
+                            height: 18
+                            radius: 2
+                            color: "#202428"
+                            border.color: "#5f6870"
+                            z: 6000
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: Number(handle.ratio).toFixed(2) + "*"
+                                color: "#cbd3da"
+                                font.pixelSize: 10
+                            }
+
+                            TapHandler {
+                                acceptedButtons: Qt.LeftButton
+                                onDoubleTapped: ratioEditor.openForHandle(handle.parentCellId,
+                                                                          Number(handle.ratio).toFixed(2),
+                                                                          parent.x,
+                                                                          parent.y)
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: ratioEditor
+                        width: 54
+                        height: 22
+                        radius: 2
+                        color: "#ffffff"
+                        border.color: "#ff9a2c"
+                        visible: false
+                        z: 8000
+
+                        property int parentCellId: -1
+
+                        function openForHandle(parentId, value, editorX, editorY) {
+                            parentCellId = parentId
+                            x = editorX
+                            y = editorY
+                            ratioInput.text = value
+                            visible = true
+                            ratioInput.forceActiveFocus()
+                            ratioInput.selectAll()
+                        }
+
+                        TextInput {
+                            id: ratioInput
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            color: "#111820"
+                            font.pixelSize: 11
+                            horizontalAlignment: TextInput.AlignHCenter
+                            verticalAlignment: TextInput.AlignVCenter
+
+                            onAccepted: {
+                                canvasViewModel.setExactRatio(ratioEditor.parentCellId, Number(text))
+                                ratioEditor.visible = false
+                            }
+
+                            onEditingFinished: {
+                                if (ratioEditor.visible) {
+                                    canvasViewModel.setExactRatio(ratioEditor.parentCellId, Number(text))
+                                    ratioEditor.visible = false
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: topRuler
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        height: 14
+                        color: "#1f2327"
+                        opacity: 0.92
+                        z: 6500
+
+                        DragHandler {
+                            id: topRulerDrag
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            onActiveChanged: {
+                                if (!active) {
+                                    var point = topRuler.mapToItem(designStage, centroid.position.x, centroid.position.y)
+                                    if (point.y >= 0 && point.y <= designStage.height)
+                                        canvasViewModel.splitCellAt("vertical", point.x / designStage.width, point.y / designStage.height)
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: leftRuler
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        width: 14
+                        color: "#1f2327"
+                        opacity: 0.92
+                        z: 6500
+
+                        DragHandler {
+                            id: leftRulerDrag
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            onActiveChanged: {
+                                if (!active) {
+                                    var point = leftRuler.mapToItem(designStage, centroid.position.x, centroid.position.y)
+                                    if (point.x >= 0 && point.x <= designStage.width)
+                                        canvasViewModel.splitCellAt("horizontal", point.x / designStage.width, point.y / designStage.height)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 WorkspaceStatusBar {
                     id: workspaceStatusBar
+                    objectName: "CanvasWorkspaceStatusBar"
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom

@@ -1,8 +1,6 @@
 #pragma once
 
-#include <QString>
-#include <QVariantMap>
-#include <QtGlobal>
+#include "WidgetInstance.h"
 #include "WidgetModel.h"
 
 struct WidgetItem
@@ -19,18 +17,15 @@ struct WidgetItem
     qreal width  = 160;
     qreal height = 92;
 
-    // Common appearance
     QString buttonColor = "#2f2f2f";
     QString borderColor = "#272727";
     QString iconColor   = "#f6f6f6";
 
-    // Data binding
     QString dataSource  = "AllProcess";
     QString controlType = "Both Display";
 
     bool autoFill = false;
 
-    // Type-specific properties (e.g. rows/columns for Table)
     QVariantMap properties;
 };
 

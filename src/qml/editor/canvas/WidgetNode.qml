@@ -57,7 +57,6 @@ Item {
         drag.threshold: 8
 
         onPressed: function(mouse) {
-            root.z = 999
             root.selectedRequested(root.widgetId, (mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) !== 0)
         }
 
@@ -76,7 +75,6 @@ Item {
         }
 
         onReleased: {
-            root.z = 1
             root.x = Math.max(0, Math.min(root.x, root.boundsWidth - root.width))
             root.y = Math.max(0, Math.min(root.y, root.boundsHeight - root.height))
             root.showVerticalGuide = false

@@ -38,7 +38,12 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(QVariantList layoutCells READ layoutCells NOTIFY layoutChanged)
     Q_PROPERTY(QVariantList layoutResizeHandles READ layoutResizeHandles NOTIFY layoutChanged)
     Q_PROPERTY(int selectedLayoutCellId READ selectedLayoutCellId NOTIFY layoutChanged)
+    Q_PROPERTY(int selectedLayoutCellCount READ selectedLayoutCellCount NOTIFY layoutChanged)
     Q_PROPERTY(bool hasSelectedLayoutCell READ hasSelectedLayoutCell NOTIFY layoutChanged)
+    Q_PROPERTY(QString inspectorMode READ inspectorMode NOTIFY inspectorModeChanged)
+    Q_PROPERTY(QString selectedContainerName READ selectedContainerName NOTIFY layoutChanged)
+    Q_PROPERTY(qreal selectedContainerWidth READ selectedContainerWidth NOTIFY layoutChanged)
+    Q_PROPERTY(qreal selectedContainerHeight READ selectedContainerHeight NOTIFY layoutChanged)
     Q_PROPERTY(bool    currentShowGrid      READ currentShowGrid      NOTIFY layoutChanged)
     Q_PROPERTY(QString currentGridLineColor READ currentGridLineColor NOTIFY layoutChanged)
     Q_PROPERTY(QString currentBackgroundColor READ currentBackgroundColor NOTIFY layoutChanged)
@@ -114,14 +119,21 @@ public:
     Q_INVOKABLE void splitSelectedLayoutCells(int rows, int columns);
     Q_INVOKABLE void splitSelectedRegionHorizontal();
     Q_INVOKABLE void splitSelectedRegionVertical();
+    Q_INVOKABLE bool splitCell(int cellId, const QString& orientation, qreal ratio);
+    Q_INVOKABLE bool splitCellAt(const QString& orientation, qreal normalizedX, qreal normalizedY);
     Q_INVOKABLE void selectLayoutCell(int cellId, bool additive = false);
     Q_INVOKABLE void clearLayoutCellSelection();
     Q_INVOKABLE void assignSelectedWidgetToLayoutCell(int cellId);
     Q_INVOKABLE void addWidgetToLayoutCell(const QString& type, int cellId);
     Q_INVOKABLE void addWidgetToLayoutCellAt(const QString& type, int cellId, qreal x, qreal y);
     Q_INVOKABLE void mergeSelectedLayoutCells();
+    Q_INVOKABLE bool mergeSelectedContainersHorizontal();
+    Q_INVOKABLE bool mergeSelectedContainersVertical();
+    Q_INVOKABLE bool mergeCells(const QVariantList& cellIds);
     Q_INVOKABLE void mergeLayoutSiblings(int firstCellId, int secondCellId);
     Q_INVOKABLE void unmergeSelectedLayoutCell();
+    Q_INVOKABLE bool resizeDivider(int parentCellId, qreal ratio, qreal minFirstRatio = 0.0, qreal minSecondRatio = 0.0);
+    Q_INVOKABLE bool setExactRatio(int parentCellId, qreal ratio);
     Q_INVOKABLE void resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
                                        const QString& orientation, qreal deltaRatio);
     Q_INVOKABLE int  currentBasicLayout() const;
@@ -154,7 +166,12 @@ public:
     QVariantList layoutCells() const;
     QVariantList layoutResizeHandles() const;
     int selectedLayoutCellId() const;
+    int selectedLayoutCellCount() const;
     bool hasSelectedLayoutCell() const;
+    QString inspectorMode() const;
+    QString selectedContainerName() const;
+    qreal selectedContainerWidth() const;
+    qreal selectedContainerHeight() const;
 
 signals:
     void selectedWidgetChanged();
@@ -164,6 +181,7 @@ signals:
     void tabsChanged();
     void activeTabChanged();
     void layoutChanged();
+    void inspectorModeChanged();
 
 private:
     struct StateSnapshot
@@ -193,7 +211,10 @@ private:
     eversight::LayoutNode* findLayoutParent(int childId);
     const eversight::LayoutNode* findLayoutParent(int childId) const;
     void splitLayoutNode(eversight::LayoutNode& node, int rows, int columns);
+    bool splitLayoutNodeAtRatio(eversight::LayoutNode& node, const QString& orientation, qreal ratio);
     void setLayoutNodeRect(eversight::LayoutNode& node, qreal x, qreal y, qreal width, qreal height);
+    int cellAt(qreal normalizedX, qreal normalizedY) const;
+    bool mergeSelectedContainersByOrientation(const QString& orientation);
     void setLayoutTemplate(eversight::CanvasLayoutModel& layout, int tmpl);
     int nextLayoutNodeId(eversight::CanvasLayoutModel& layout);
     void assignWidgetToLayoutCell(int widgetId, int cellId);

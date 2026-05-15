@@ -12,22 +12,25 @@ Column {
     property string filterText: ""
     spacing: 0
     width: parent ? parent.width : 250
-    visible: visibleItemCount > 0
+    visible: filteredItems.length > 0
 
     readonly property string normalizedFilter: filterText.toLowerCase()
-    readonly property int visibleItemCount: {
-        var count = 0
+    readonly property var filteredItems: {
+        var items = []
         for (var i = 0; i < paletteModel.count; ++i) {
             var it = paletteModel.get(i)
             if (it.category !== root.category) continue
-            if (normalizedFilter.length === 0) { ++count; continue }
+            if (normalizedFilter.length === 0) {
+                items.push(it)
+                continue
+            }
             var name = it.displayName ? it.displayName.toLowerCase() : ""
             var type = it.typeId ? it.typeId.toLowerCase() : ""
             var desc = it.description ? it.description.toLowerCase() : ""
             if (name.indexOf(normalizedFilter) >= 0 || type.indexOf(normalizedFilter) >= 0 || desc.indexOf(normalizedFilter) >= 0)
-                ++count
+                items.push(it)
         }
-        return count
+        return items
     }
 
     Rectangle {
@@ -65,23 +68,15 @@ Column {
         bottomPadding: 16
 
         Repeater {
-            model: paletteModel
+            model: root.filteredItems
 
             delegate: PaletteItem {
-                // filter by category and search text
-                readonly property bool matchesCategory: model.category === root.category
-                readonly property bool matchesFilter: root.normalizedFilter.length === 0
-                                                  || (model.displayName && model.displayName.toLowerCase().indexOf(root.normalizedFilter) >= 0)
-                                                  || (model.typeId && model.typeId.toLowerCase().indexOf(root.normalizedFilter) >= 0)
-
                 width: Math.floor((root.width - 18) / 3)
-                visible: matchesCategory && matchesFilter
-                height: visible ? implicitHeight : 0
 
-                widgetName: model.displayName
-                widgetType: model.typeId
-                description: model.description
-                iconSource: model.iconSource ? model.iconSource : "assets/icons/Image.png"
+                widgetName: modelData.displayName
+                widgetType: modelData.typeId
+                description: modelData.description
+                iconSource: modelData.iconSource ? modelData.iconSource : "assets/icons/Image.png"
 
                 onItemClicked: function(type) {
                     root.itemSelected(type)
