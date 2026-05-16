@@ -10,7 +10,7 @@ ColumnLayout {
     visible: canvasViewModel.hasSelectedLayoutCell
 
     readonly property var basicLayoutOptions: [
-        { label: "1", rows: 0, columns: 0 },
+        { label: "Merge", rows: 0, columns: 0 },
         { label: "2H", rows: 2, columns: 1 },
         { label: "2V", rows: 1, columns: 2 },
         { label: "3H", rows: 3, columns: 1 },
@@ -60,17 +60,35 @@ ColumnLayout {
                     readonly property var option: root.basicLayoutOptions[index]
 
                     Layout.fillWidth: true
-                    enabled: option.label === "1"
+                    enabled: option.label === "Merge"
                              ? canvasViewModel.selectedLayoutCellCount === 2
                              : canvasViewModel.selectedLayoutCellCount === 1
                     text: option.label
                     onClicked: {
-                        if (option.label === "1")
+                        if (option.label === "Merge")
                             canvasViewModel.mergeSelectedLayoutCells()
                         else
                             canvasViewModel.splitSelectedLayoutCells(option.rows, option.columns)
                     }
                 }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Button {
+                text: "Clear Layout"
+                Layout.fillWidth: true
+                onClicked: canvasViewModel.clearLayoutToRootContainer()
+            }
+
+            Button {
+                text: "Clear Widgets"
+                Layout.fillWidth: true
+                enabled: canvasViewModel.selectedLayoutCellCount >= 1
+                onClicked: canvasViewModel.clearWidgetsInSelectedLayoutCell()
             }
         }
 

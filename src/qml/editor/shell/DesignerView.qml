@@ -183,6 +183,10 @@ Item {
                 zoom: root.zoomPercent / 100
                 onWidthChanged: if (root.fitToWindowMode) Qt.callLater(root.fitCanvasToWindow)
                 onHeightChanged: if (root.fitToWindowMode) Qt.callLater(root.fitCanvasToWindow)
+                onZoomWheelRequested: function(steps) {
+                    root.fitToWindowMode = false
+                    root.zoomPercent = Math.max(40, Math.min(160, root.zoomPercent + steps * 10))
+                }
             }
 
             InspectorPanel {

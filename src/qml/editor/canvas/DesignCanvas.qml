@@ -17,6 +17,8 @@ Item {
     property real activeRatioX: 0
     property real activeRatioY: 0
 
+    signal zoomWheelRequested(int steps)
+
     Behavior on zoom {
         NumberAnimation {
             duration: 120
@@ -79,6 +81,18 @@ Item {
             onClicked: {
                 canvasViewModel.clearSelection()
                 canvasViewModel.clearLayoutCellSelection()
+            }
+        }
+
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            enabled: !root.previewMode
+            target: null
+            onWheel: function(event) {
+                if (event.angleDelta.y === 0)
+                    return
+                root.zoomWheelRequested(event.angleDelta.y > 0 ? 1 : -1)
+                event.accepted = true
             }
         }
 

@@ -130,6 +130,7 @@ public:
     Q_INVOKABLE void setSplitTemplate(int tmpl);
     Q_INVOKABLE void setCustomLayout(int rows, int columns);
     Q_INVOKABLE void splitSelectedLayoutCells(int rows, int columns);
+    Q_INVOKABLE void clearLayoutToRootContainer();
     Q_INVOKABLE void splitSelectedRegionHorizontal();
     Q_INVOKABLE void splitSelectedRegionVertical();
     Q_INVOKABLE bool splitCell(int cellId, const QString& orientation, qreal ratio);
@@ -139,6 +140,7 @@ public:
     Q_INVOKABLE void assignSelectedWidgetToLayoutCell(int cellId);
     Q_INVOKABLE void addWidgetToLayoutCell(const QString& type, int cellId);
     Q_INVOKABLE void addWidgetToLayoutCellAt(const QString& type, int cellId, qreal x, qreal y);
+    Q_INVOKABLE void clearWidgetsInSelectedLayoutCell();
     Q_INVOKABLE void mergeSelectedLayoutCells();
     Q_INVOKABLE bool mergeSelectedContainersHorizontal();
     Q_INVOKABLE bool mergeSelectedContainersVertical();

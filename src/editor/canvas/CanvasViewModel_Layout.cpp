@@ -116,6 +116,36 @@ void CanvasViewModel::splitSelectedLayoutCells(int rows, int columns)
     emit layoutChanged();
 }
 
+void CanvasViewModel::clearLayoutToRootContainer()
+{
+    CanvasLayoutModel* layout = activeLayout();
+    if (!layout)
+        return;
+
+    if (layout->root.children.isEmpty())
+        return;
+
+    pushUndoState();
+    layout->basicLayout = CanvasLayoutModel::L1;
+    layout->splitTemplate = 0;
+    layout->customRows = 1;
+    layout->customColumns = 1;
+    layout->root.children.clear();
+    layout->root.assignedWidgetId = -1;
+    layout->selectedCellIds = { layout->root.id };
+    layout->nextNodeId = 2;
+
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        WidgetItem& widget = m_widgets[i];
+        widget.parentRegionId = layout->root.id;
+        WidgetEngine::clampToContainer(widget, &layout->root, canvasWidth(), canvasHeight());
+        emit dataChanged(index(i, 0), index(i, 0),
+                         { ParentRegionIdRole, XRole, YRole, WidthRole, HeightRole });
+    }
+    syncScreenFromWidgets();
+    emit layoutChanged();
+}
+
 void CanvasViewModel::splitSelectedRegionHorizontal()
 {
     splitSelectedLayoutCells(2, 1);

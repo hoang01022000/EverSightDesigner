@@ -187,6 +187,47 @@ void CanvasViewModel::removeSelectedWidget()
     emit layoutChanged();
 }
 
+void CanvasViewModel::clearWidgetsInSelectedLayoutCell()
+{
+    const int selectedCellId = selectedLayoutCellId();
+    if (selectedCellId < 0)
+        return;
+
+    QList<int> rows;
+    QList<int> removedWidgetIds;
+    for (int i = 0; i < m_widgets.size(); ++i) {
+        if (m_widgets.at(i).parentRegionId == selectedCellId) {
+            rows.append(i);
+            removedWidgetIds.append(m_widgets.at(i).id);
+        }
+    }
+    if (rows.isEmpty())
+        return;
+
+    pushUndoState();
+    beginResetModel();
+    for (int i = rows.size() - 1; i >= 0; --i)
+        m_widgets.removeAt(rows.at(i));
+
+    if (CanvasLayoutModel* layout = activeLayout()) {
+        std::function<void(LayoutNode&)> clearRemovedAssignments = [&](LayoutNode& node) {
+            if (removedWidgetIds.contains(node.assignedWidgetId))
+                node.assignedWidgetId = -1;
+            for (LayoutNode& child : node.children)
+                clearRemovedAssignments(child);
+        };
+        clearRemovedAssignments(layout->root);
+    }
+
+    syncScreenFromWidgets();
+    m_selectedWidgetIds.clear();
+    m_selectedWidgetId = -1;
+    endResetModel();
+    emit widgetCountChanged();
+    emit selectedWidgetChanged();
+    emit layoutChanged();
+}
+
 void CanvasViewModel::duplicateSelectedWidget()
 {
     const int row = indexOfWidget(m_selectedWidgetId);
