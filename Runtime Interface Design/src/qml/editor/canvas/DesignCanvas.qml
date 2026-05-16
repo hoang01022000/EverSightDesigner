@@ -5,13 +5,14 @@ Item {
     id: root
 
     property real zoom: 0.84
-    readonly property real designWidth: 1280
-    readonly property real designHeight: 720
+    property real designWidth: canvasViewModel.canvasWidth
+    property real designHeight: canvasViewModel.canvasHeight
     readonly property real viewportHorizontalPadding: 48
     readonly property real viewportVerticalPadding: 48
     readonly property real workspaceTopBarHeight: 42
     readonly property real workspaceStatusBarHeight: 24
     readonly property real editableHeight: designHeight - workspaceStatusBarHeight
+    readonly property bool previewMode: canvasViewModel.previewMode
     property string activeRatioText: ""
     property real activeRatioX: 0
     property real activeRatioY: 0
@@ -74,6 +75,7 @@ Item {
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton
+            enabled: !root.previewMode
             onClicked: {
                 canvasViewModel.clearSelection()
                 canvasViewModel.clearLayoutCellSelection()
@@ -143,13 +145,14 @@ Item {
 
                         MenuItem {
                             text: "Merge cells"
-                            enabled: canvasViewModel.hasSelectedLayoutCell
+                            enabled: canvasViewModel.hasSelectedLayoutCell && !root.previewMode
                             onTriggered: canvasViewModel.mergeSelectedLayoutCells()
                         }
                     }
 
                     TapHandler {
                         acceptedButtons: Qt.RightButton
+                        enabled: !root.previewMode
                         onTapped: function(eventPoint) {
                             cellContextMenu.popup(designStage, eventPoint.position.x, eventPoint.position.y)
                         }
@@ -206,20 +209,24 @@ Item {
                             Rectangle {
                                 anchors.fill: parent
                                 color: "transparent"
-                                border.color: cell.selected || dropArea.containsDrag ? "#ff9a2c"
+                                border.color: root.previewMode ? "transparent"
+                                                   : cell.selected || dropArea.containsDrag ? "#ff9a2c"
                                                    : (regionContainer.hovered ? "#9aa4ad" : "#68727b")
-                                border.width: cell.selected || dropArea.containsDrag ? 2
+                                border.width: root.previewMode ? 0
+                                             : cell.selected || dropArea.containsDrag ? 2
                                              : (regionContainer.hovered ? 2 : 1)
                                 z: 1
                             }
 
                             HoverHandler {
+                                enabled: !root.previewMode
                                 onHoveredChanged: regionContainer.hovered = hovered
                             }
 
                             MouseArea {
                                 anchors.fill: parent
                                 acceptedButtons: Qt.LeftButton
+                                enabled: !root.previewMode
                                 z: 3
 
                                 onClicked: function(mouse) {
@@ -243,6 +250,7 @@ Item {
                                 id: dropArea
                                 anchors.fill: parent
                                 z: 4
+                                enabled: !root.previewMode
                                 keys: ["text/plain", "application/eversight-widget-type"]
 
                                 onDropped: function(drop) {
@@ -284,6 +292,7 @@ Item {
                             iconColor: model.widgetIconColor
                             componentSource: model.widgetComponentSource
                             selected: model.widgetSelected
+                            previewMode: root.previewMode
 
                             z: 1000 + index
 
@@ -340,9 +349,11 @@ Item {
                         delegate: SplitterHandle {
                             required property int index
                             readonly property var handle: designStage.layoutResizeHandles[index]
+                            property real dragRatio: handle.ratio
 
                             orientation: handle.orientation
                             coordinateItem: designStage
+                            parentCellId: handle.parentCellId
                             x: handle.orientation === "vertical"
                                ? handle.x * designStage.width - width / 2
                                : handle.start * designStage.width
@@ -356,6 +367,8 @@ Item {
                                     ? Math.max(36, handle.length * designStage.height)
                                     : 12
                             z: 5000
+                            visible: !root.previewMode
+                            enabled: !root.previewMode
 
                             onDragged: function(deltaRatio) {
                                 var normalizedDelta = deltaRatio
@@ -363,15 +376,23 @@ Item {
                                         ? 50 / (handle.parentWidth * designStage.width)
                                         : 50 / (handle.parentHeight * designStage.height)
                                 var minSecond = minFirst
-                                var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, handle.ratio + normalizedDelta))
-                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
-                                                                  String(handle.secondCellId),
-                                                                  handle.orientation,
-                                                                  normalizedDelta)
+                                var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, dragRatio + normalizedDelta))
+                                dragRatio = nextRatio
+                                canvasViewModel.resizeDivider(handle.parentCellId,
+                                                              nextRatio,
+                                                              minFirst,
+                                                              minSecond)
                                 root.activeRatioText = nextRatio.toFixed(2) + "*"
                                 root.activeRatioX = handle.orientation === "vertical" ? handle.x * designStage.width : handle.start * designStage.width
                                 root.activeRatioY = handle.orientation === "vertical" ? 0 : handle.y * designStage.height
                             }
+
+                            onDragStarted: {
+                                dragRatio = handle.ratio
+                                canvasViewModel.beginResizeDivider(handle.parentCellId)
+                            }
+
+                            onDragFinished: canvasViewModel.endResizeDivider()
 
                             onMergeRequested: {
                                 canvasViewModel.mergeLayoutSiblings(handle.firstCellId,
@@ -389,6 +410,7 @@ Item {
                         color: "#252a2f"
                         border.color: "#ff9a2c"
                         visible: root.activeRatioText.length > 0
+                                 && !root.previewMode
                         z: 7000
 
                         Text {
@@ -415,6 +437,7 @@ Item {
                             radius: 2
                             color: "#202428"
                             border.color: "#5f6870"
+                            visible: !root.previewMode
                             z: 6000
 
                             Text {
@@ -443,6 +466,7 @@ Item {
                         border.color: "#ff9a2c"
                         visible: false
                         z: 8000
+                        enabled: !root.previewMode
 
                         property int parentCellId: -1
 

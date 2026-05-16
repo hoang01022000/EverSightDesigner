@@ -19,7 +19,8 @@ Item {
     property bool showVerticalGuide: false
     property bool showHorizontalGuide: false
     property bool geometryEditing: false
-    readonly property bool overlayVisible: visible && selected
+    property bool previewMode: false
+    readonly property bool overlayVisible: visible && selected && !previewMode
 
     signal selectedRequested(int id, bool additive)
     signal geometryCommitted(int id, real newX, real newY, real newWidth, real newHeight)
@@ -69,6 +70,7 @@ Item {
         drag.target: root
         drag.threshold: 8
         preventStealing: true
+        enabled: !root.previewMode
 
         onPressed: function(mouse) {
             root.geometryEditing = true
@@ -112,7 +114,7 @@ Item {
         width: 1
         height: root.boundsHeight
         color: "#39a7ff"
-        visible: root.visible && root.showVerticalGuide
+        visible: root.visible && root.showVerticalGuide && !root.previewMode
         z: 4000
     }
 
@@ -123,7 +125,7 @@ Item {
         width: root.boundsWidth
         height: 1
         color: "#39a7ff"
-        visible: root.visible && root.showHorizontalGuide
+        visible: root.visible && root.showHorizontalGuide && !root.previewMode
         z: 4000
     }
 

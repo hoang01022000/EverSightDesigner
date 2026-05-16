@@ -7,6 +7,9 @@
 #include "../../shared/models/ScreenModel.h"
 #include "../../shared/models/CanvasTabModel.h"
 #include "../../shared/models/FixedBarState.h"
+#include "PreviewManager.h"
+#include "UndoStack.h"
+#include "WidgetStore.h"
 
 class CanvasViewModel : public QAbstractListModel
 {
@@ -33,8 +36,8 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(QVariantList selectedPropertyDefinitions READ selectedPropertyDefinitions NOTIFY selectedWidgetChanged)
     Q_PROPERTY(bool selectedWidgetHasDataSource READ selectedWidgetHasDataSource NOTIFY selectedWidgetChanged)
     Q_PROPERTY(QVariantList selectedAppearanceFields READ selectedAppearanceFields NOTIFY selectedWidgetChanged)
-    Q_PROPERTY(qreal canvasWidth READ canvasWidth CONSTANT)
-    Q_PROPERTY(qreal canvasHeight READ canvasHeight CONSTANT)
+    Q_PROPERTY(qreal canvasWidth READ canvasWidth NOTIFY canvasSizeChanged)
+    Q_PROPERTY(qreal canvasHeight READ canvasHeight NOTIFY canvasSizeChanged)
     Q_PROPERTY(int     currentBasicLayout   READ currentBasicLayout   NOTIFY layoutChanged)
     Q_PROPERTY(int     currentSplitTemplate READ currentSplitTemplate NOTIFY layoutChanged)
     Q_PROPERTY(int     currentCustomRows READ currentCustomRows NOTIFY layoutChanged)
@@ -55,6 +58,7 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(bool bottomFixedVisible READ isBottomFixedVisible NOTIFY fixedBarChanged)
     Q_PROPERTY(bool leftFixedVisible READ isLeftFixedVisible NOTIFY fixedBarChanged)
     Q_PROPERTY(bool rightFixedVisible READ isRightFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool previewMode READ previewMode NOTIFY previewModeChanged)
     Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabChanged)
     Q_PROPERTY(int tabCount READ tabCount NOTIFY tabsChanged)
 
@@ -105,6 +109,9 @@ public:
     Q_INVOKABLE void clear();
     Q_INVOKABLE bool saveToFile(const QString& filePath) const;
     Q_INVOKABLE bool loadFromFile(const QString& filePath);
+    Q_INVOKABLE void setCanvasSize(qreal width, qreal height);
+    Q_INVOKABLE void enterPreview();
+    Q_INVOKABLE void exitPreview();
 
     // Tab and fixed bar management (MVVM API)
     Q_INVOKABLE void addTab();
@@ -138,7 +145,9 @@ public:
     Q_INVOKABLE bool mergeCells(const QVariantList& cellIds);
     Q_INVOKABLE void mergeLayoutSiblings(int firstCellId, int secondCellId);
     Q_INVOKABLE void unmergeSelectedLayoutCell();
+    Q_INVOKABLE void beginResizeDivider(int parentCellId);
     Q_INVOKABLE bool resizeDivider(int parentCellId, qreal ratio, qreal minFirstRatio = 0.0, qreal minSecondRatio = 0.0);
+    Q_INVOKABLE void endResizeDivider();
     Q_INVOKABLE bool setExactRatio(int parentCellId, qreal ratio);
     Q_INVOKABLE void resizeLayoutCells(const QString& firstCellId, const QString& secondCellId,
                                        const QString& orientation, qreal deltaRatio);
@@ -168,6 +177,7 @@ public:
     int     widgetCount()          const;
     bool    canUndo()              const;
     bool    canRedo()              const;
+    bool    previewMode()          const;
     QVariantList selectedPropertyDefinitions() const;
     bool selectedWidgetHasDataSource() const;
     QVariantList selectedAppearanceFields() const;
@@ -192,6 +202,8 @@ signals:
     void activeTabChanged();
     void layoutChanged();
     void inspectorModeChanged();
+    void canvasSizeChanged();
+    void previewModeChanged();
 
 private:
     struct StateSnapshot
@@ -233,14 +245,15 @@ private:
     int defaultLeafRegionId() const;
     void reassignWidgetsToRegion(const QList<int>& oldRegionIds, int newRegionId);
 
-    QList<WidgetItem> m_widgets;
-    int               m_nextId           = 1;
+    WidgetStore       m_widgetStore;
     int               m_selectedWidgetId = -1;
     QList<int>        m_selectedWidgetIds;
-    QList<StateSnapshot> m_undoStack;
-    QList<StateSnapshot> m_redoStack;
+    UndoStack<StateSnapshot> m_undoStack;
+    UndoStack<StateSnapshot> m_redoStack;
     eversight::ScreenModel m_screen;
     QList<eversight::CanvasTabModel> m_tabs;
     int m_activeTab = 0;
     eversight::FixedBarState m_fixedBars;
+    PreviewManager m_previewManager;
+    int m_resizingDividerParentCellId = -1;
 };

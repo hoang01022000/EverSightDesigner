@@ -43,14 +43,19 @@ Item {
     Component.onCompleted: Qt.callLater(root.fitCanvasToWindow)
 
     ColumnLayout {
+        id: editorShell
+
         anchors.fill: parent
         spacing: 0
+        visible: !canvasViewModel.previewMode
+        enabled: !canvasViewModel.previewMode
 
         TopBar {
             id: topBar
             Layout.fillWidth: true
             zoomPercent: root.zoomPercent
             documentTitle: root.currentFileName
+            previewMode: canvasViewModel.previewMode
 
             // File
             onOpenRequested: openFileDialog.open()
@@ -103,13 +108,32 @@ Item {
             }
 
             // Fixed area
-            onToggleTopRequested: fixedBarViewModel.setTopVisible(!fixedBarViewModel.topVisible)
-            onToggleBottomRequested: fixedBarViewModel.setBottomVisible(!fixedBarViewModel.bottomVisible)
-            onToggleLeftRequested: fixedBarViewModel.setLeftVisible(!fixedBarViewModel.leftVisible)
-            onToggleRightRequested: fixedBarViewModel.setRightVisible(!fixedBarViewModel.rightVisible)
+            onToggleTopRequested: {
+                var visible = !canvasViewModel.topFixedVisible
+                canvasViewModel.setFixedBar("top", visible)
+                fixedBarViewModel.setTopVisible(visible)
+            }
+            onToggleBottomRequested: {
+                var visible = !canvasViewModel.bottomFixedVisible
+                canvasViewModel.setFixedBar("bottom", visible)
+                fixedBarViewModel.setBottomVisible(visible)
+            }
+            onToggleLeftRequested: {
+                var visible = !canvasViewModel.leftFixedVisible
+                canvasViewModel.setFixedBar("left", visible)
+                fixedBarViewModel.setLeftVisible(visible)
+            }
+            onToggleRightRequested: {
+                var visible = !canvasViewModel.rightFixedVisible
+                canvasViewModel.setFixedBar("right", visible)
+                fixedBarViewModel.setRightVisible(visible)
+            }
 
             // Runtime
-            onPreviewRequested: statusText.text = "Preview mode is ready"
+            onPreviewRequested: {
+                canvasViewModel.enterPreview()
+                statusText.text = "Preview mode"
+            }
             onExportRequested: statusText.text = canvasViewModel.saveToFile("runtime_export.json")
                     ? "Exported runtime_export.json"
                     : "Export failed"
@@ -180,6 +204,17 @@ Item {
                 color: "#9ca3af"
                 font.pixelSize: 12
             }
+        }
+    }
+
+    RuntimePreviewSurface {
+        anchors.fill: parent
+        visible: canvasViewModel.previewMode
+        enabled: canvasViewModel.previewMode
+
+        onExitRequested: {
+            canvasViewModel.exitPreview()
+            statusText.text = "Editor mode"
         }
     }
 

@@ -122,6 +122,12 @@ static CanvasLayoutModel canvasLayoutFromJson(const QJsonObject& obj, const QJso
 CanvasViewModel::CanvasViewModel(QObject* parent)
     : QAbstractListModel(parent)
 {
+    connect(&m_previewManager, &PreviewManager::previewModeChanged, this, [this]() {
+        emit previewModeChanged();
+        emitAllWidgetDataChanged();
+        emit layoutChanged();
+    });
+
     CanvasTabModel tab;
     tab.id = 1;
     tab.title = QStringLiteral("Tab 1");
@@ -782,7 +788,7 @@ QVariant CanvasViewModel::data(const QModelIndex& index, int role) const
     case WidthRole:       return w.width;
     case HeightRole:      return w.height;
     case TitleRole:       return w.title;
-    case SelectedRole:    return m_selectedWidgetIds.contains(w.id);
+    case SelectedRole:    return !previewMode() && m_selectedWidgetIds.contains(w.id);
     case ComponentSourceRole: {
         const WidgetTypeDescriptor* desc = WidgetTypeRegistry::instance().descriptor(w.type);
         return desc ? desc->componentSource : QStringLiteral("widgets/PlaceholderWidget.qml");
@@ -1585,6 +1591,17 @@ int     CanvasViewModel::selectedCount()        const { return m_selectedWidgetI
 int     CanvasViewModel::widgetCount()          const { return m_widgets.size(); }
 bool    CanvasViewModel::canUndo()              const { return !m_undoStack.isEmpty(); }
 bool    CanvasViewModel::canRedo()              const { return !m_redoStack.isEmpty(); }
+bool    CanvasViewModel::previewMode()          const { return m_previewManager.previewMode(); }
+
+void CanvasViewModel::enterPreview()
+{
+    m_previewManager.enterPreview();
+}
+
+void CanvasViewModel::exitPreview()
+{
+    m_previewManager.exitPreview();
+}
 
 QVariantList CanvasViewModel::selectedPropertyDefinitions() const
 {
@@ -1675,7 +1692,7 @@ QVariantList CanvasViewModel::layoutCells() const
             cell.insert("columnSpan", node.columnSpan);
             cell.insert("depth", depth);
             cell.insert("assignedWidgetId", node.assignedWidgetId);
-            cell.insert("selected", layout->selectedCellIds.contains(node.id));
+            cell.insert("selected", !previewMode() && layout->selectedCellIds.contains(node.id));
             cells.append(cell);
             return;
         }

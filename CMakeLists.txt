@@ -79,12 +79,18 @@ target_sources(appEverSightDesigner PRIVATE
     src/editor/shell/TopBarViewModel.h
     src/editor/shell/TopBarViewModel.cpp
     src/editor/canvas/CanvasViewModel.h
-    src/editor/canvas/CanvasViewModel.cpp
-    src/editor/canvas/CanvasViewModelImpl.cpp
+    src/editor/canvas/CanvasViewModel_Tabs.cpp
+    src/editor/canvas/CanvasViewModel_Layout.cpp
+    src/editor/canvas/CanvasViewModel_Widgets.cpp
+    src/editor/canvas/CanvasViewModel_Inspector.cpp
+    src/editor/canvas/CanvasViewModel_Persistence.cpp
+    src/editor/canvas/CanvasViewModel_State.cpp
     src/editor/canvas/EditorController.h
     src/editor/canvas/EditorController.cpp
     src/editor/canvas/LayoutManager.h
     src/editor/canvas/LayoutManager.cpp
+    src/editor/canvas/PreviewManager.h
+    src/editor/canvas/PreviewManager.cpp
     src/editor/canvas/UndoStack.h
     src/editor/canvas/WidgetStore.h
     src/editor/canvas/WidgetEngine.h

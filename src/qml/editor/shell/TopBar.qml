@@ -8,6 +8,7 @@ Rectangle {
 
     property int zoomPercent: 84
     property string documentTitle: "Untitled"
+    property bool previewMode: false
 
     signal openRequested()
     signal saveRequested()
@@ -85,7 +86,7 @@ Rectangle {
     Action { id: actToggleLeft; text: "Toggle Left Fixed Area"; onTriggered: root.toggleLeftRequested() }
     Action { id: actToggleRight; text: "Toggle Right Fixed Area"; onTriggered: root.toggleRightRequested() }
 
-    Action { id: actPreview; text: "Preview"; onTriggered: root.previewRequested() }
+    Action { id: actPreview; text: root.previewMode ? "Edit" : "Preview"; onTriggered: root.previewRequested() }
     Action { id: actExport; text: "Export"; onTriggered: root.exportRequested() }
 
     Rectangle {

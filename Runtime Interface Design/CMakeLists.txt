@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 QuickLayouts)
+find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2 QuickDialogs2 QuickLayouts)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -80,12 +80,15 @@ target_sources(appEverSightDesigner PRIVATE
     src/editor/shell/TopBarViewModel.cpp
     src/editor/canvas/CanvasViewModel.h
     src/editor/canvas/CanvasViewModel.cpp
+    src/editor/canvas/CanvasViewModelImpl.cpp
     src/editor/canvas/EditorController.h
     src/editor/canvas/EditorController.cpp
-    src/editor/canvas/LayoutEngine.h
-    src/editor/canvas/LayoutEngine.cpp
     src/editor/canvas/LayoutManager.h
     src/editor/canvas/LayoutManager.cpp
+    src/editor/canvas/PreviewManager.h
+    src/editor/canvas/PreviewManager.cpp
+    src/editor/canvas/UndoStack.h
+    src/editor/canvas/WidgetStore.h
     src/editor/canvas/WidgetEngine.h
     src/editor/canvas/WidgetEngine.cpp
     src/editor/canvas/FixedBarViewModel.h
@@ -100,7 +103,7 @@ set_target_properties(appEverSightDesigner PROPERTIES
 )
 
 target_link_libraries(appEverSightDesigner
-    PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::QuickLayouts
+    PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::QuickDialogs2 Qt6::QuickLayouts
 )
 
 install(TARGETS appEverSightDesigner

@@ -4,20 +4,27 @@
 
 namespace eversight {
 
-qreal WidgetEngine::containerWidth(const LayoutNode* container)
+qreal WidgetEngine::editableHeight(qreal canvasHeight)
 {
-    return container ? container->width * DESIGN_WIDTH : DESIGN_WIDTH;
+    return qMax<qreal>(MIN_WIDGET_SIZE, canvasHeight - WORKSPACE_STATUS_BAR_HEIGHT);
 }
 
-qreal WidgetEngine::containerHeight(const LayoutNode* container)
+qreal WidgetEngine::containerWidth(const LayoutNode* container, qreal canvasWidth)
 {
-    return container ? container->height * EDITABLE_HEIGHT : EDITABLE_HEIGHT;
+    return container ? container->width * canvasWidth : canvasWidth;
 }
 
-QRectF WidgetEngine::clampedGeometry(const QRectF& requested, const LayoutNode* container)
+qreal WidgetEngine::containerHeight(const LayoutNode* container, qreal canvasHeight)
 {
-    const qreal boundsWidth = containerWidth(container);
-    const qreal boundsHeight = containerHeight(container);
+    const qreal height = editableHeight(canvasHeight);
+    return container ? container->height * height : height;
+}
+
+QRectF WidgetEngine::clampedGeometry(const QRectF& requested, const LayoutNode* container,
+                                     qreal canvasWidth, qreal canvasHeight)
+{
+    const qreal boundsWidth = containerWidth(container, canvasWidth);
+    const qreal boundsHeight = containerHeight(container, canvasHeight);
     const qreal width = qBound(MIN_WIDGET_SIZE, requested.width(), qMax(MIN_WIDGET_SIZE, boundsWidth));
     const qreal height = qBound(MIN_WIDGET_SIZE, requested.height(), qMax(MIN_WIDGET_SIZE, boundsHeight));
     const qreal x = qBound<qreal>(0.0, requested.x(), qMax<qreal>(0.0, boundsWidth - width));
@@ -25,9 +32,11 @@ QRectF WidgetEngine::clampedGeometry(const QRectF& requested, const LayoutNode* 
     return QRectF(x, y, width, height);
 }
 
-void WidgetEngine::clampToContainer(WidgetItem& widget, const LayoutNode* container)
+void WidgetEngine::clampToContainer(WidgetItem& widget, const LayoutNode* container,
+                                    qreal canvasWidth, qreal canvasHeight)
 {
-    const QRectF rect = clampedGeometry(QRectF(widget.x, widget.y, widget.width, widget.height), container);
+    const QRectF rect = clampedGeometry(QRectF(widget.x, widget.y, widget.width, widget.height),
+                                        container, canvasWidth, canvasHeight);
     widget.x = rect.x();
     widget.y = rect.y();
     widget.width = rect.width();

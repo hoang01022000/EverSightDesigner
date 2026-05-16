@@ -7,6 +7,7 @@
 #include "../../shared/models/ScreenModel.h"
 #include "../../shared/models/CanvasTabModel.h"
 #include "../../shared/models/FixedBarState.h"
+#include "PreviewManager.h"
 #include "UndoStack.h"
 #include "WidgetStore.h"
 
@@ -57,6 +58,7 @@ class CanvasViewModel : public QAbstractListModel
     Q_PROPERTY(bool bottomFixedVisible READ isBottomFixedVisible NOTIFY fixedBarChanged)
     Q_PROPERTY(bool leftFixedVisible READ isLeftFixedVisible NOTIFY fixedBarChanged)
     Q_PROPERTY(bool rightFixedVisible READ isRightFixedVisible NOTIFY fixedBarChanged)
+    Q_PROPERTY(bool previewMode READ previewMode NOTIFY previewModeChanged)
     Q_PROPERTY(int activeTabIndex READ activeTabIndex NOTIFY activeTabChanged)
     Q_PROPERTY(int tabCount READ tabCount NOTIFY tabsChanged)
 
@@ -108,6 +110,8 @@ public:
     Q_INVOKABLE bool saveToFile(const QString& filePath) const;
     Q_INVOKABLE bool loadFromFile(const QString& filePath);
     Q_INVOKABLE void setCanvasSize(qreal width, qreal height);
+    Q_INVOKABLE void enterPreview();
+    Q_INVOKABLE void exitPreview();
 
     // Tab and fixed bar management (MVVM API)
     Q_INVOKABLE void addTab();
@@ -173,6 +177,7 @@ public:
     int     widgetCount()          const;
     bool    canUndo()              const;
     bool    canRedo()              const;
+    bool    previewMode()          const;
     QVariantList selectedPropertyDefinitions() const;
     bool selectedWidgetHasDataSource() const;
     QVariantList selectedAppearanceFields() const;
@@ -198,6 +203,7 @@ signals:
     void layoutChanged();
     void inspectorModeChanged();
     void canvasSizeChanged();
+    void previewModeChanged();
 
 private:
     struct StateSnapshot
@@ -248,5 +254,6 @@ private:
     QList<eversight::CanvasTabModel> m_tabs;
     int m_activeTab = 0;
     eversight::FixedBarState m_fixedBars;
+    PreviewManager m_previewManager;
     int m_resizingDividerParentCellId = -1;
 };
