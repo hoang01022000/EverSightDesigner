@@ -5,8 +5,8 @@ Item {
     id: root
 
     property real zoom: 0.84
-    readonly property real designWidth: 1280
-    readonly property real designHeight: 720
+    property real designWidth: canvasViewModel.canvasWidth
+    property real designHeight: canvasViewModel.canvasHeight
     readonly property real viewportHorizontalPadding: 48
     readonly property real viewportVerticalPadding: 48
     readonly property real workspaceTopBarHeight: 42
@@ -340,9 +340,11 @@ Item {
                         delegate: SplitterHandle {
                             required property int index
                             readonly property var handle: designStage.layoutResizeHandles[index]
+                            property real dragRatio: handle.ratio
 
                             orientation: handle.orientation
                             coordinateItem: designStage
+                            parentCellId: handle.parentCellId
                             x: handle.orientation === "vertical"
                                ? handle.x * designStage.width - width / 2
                                : handle.start * designStage.width
@@ -363,15 +365,23 @@ Item {
                                         ? 50 / (handle.parentWidth * designStage.width)
                                         : 50 / (handle.parentHeight * designStage.height)
                                 var minSecond = minFirst
-                                var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, handle.ratio + normalizedDelta))
-                                canvasViewModel.resizeLayoutCells(String(handle.firstCellId),
-                                                                  String(handle.secondCellId),
-                                                                  handle.orientation,
-                                                                  normalizedDelta)
+                                var nextRatio = Math.max(minFirst, Math.min(1 - minSecond, dragRatio + normalizedDelta))
+                                dragRatio = nextRatio
+                                canvasViewModel.resizeDivider(handle.parentCellId,
+                                                              nextRatio,
+                                                              minFirst,
+                                                              minSecond)
                                 root.activeRatioText = nextRatio.toFixed(2) + "*"
                                 root.activeRatioX = handle.orientation === "vertical" ? handle.x * designStage.width : handle.start * designStage.width
                                 root.activeRatioY = handle.orientation === "vertical" ? 0 : handle.y * designStage.height
                             }
+
+                            onDragStarted: {
+                                dragRatio = handle.ratio
+                                canvasViewModel.beginResizeDivider(handle.parentCellId)
+                            }
+
+                            onDragFinished: canvasViewModel.endResizeDivider()
 
                             onMergeRequested: {
                                 canvasViewModel.mergeLayoutSiblings(handle.firstCellId,

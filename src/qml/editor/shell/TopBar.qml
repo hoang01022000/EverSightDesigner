@@ -7,11 +7,14 @@ Rectangle {
     id: root
 
     property int zoomPercent: 84
+    property string documentTitle: "Untitled"
 
     signal openRequested()
     signal saveRequested()
+    signal saveAsRequested()
     signal templateManagerRequested()
     signal saveTemplateRequested()
+    signal canvasSizeRequested()
 
     signal bringToFrontRequested()
     signal bringForwardRequested()
@@ -52,8 +55,10 @@ Rectangle {
 
     Action { id: actOpen; text: "Open"; shortcut: "Ctrl+O"; onTriggered: root.openRequested() }
     Action { id: actSave; text: "Save"; shortcut: "Ctrl+S"; onTriggered: root.saveRequested() }
+    Action { id: actSaveAs; text: "Save As"; shortcut: "Ctrl+Shift+S"; onTriggered: root.saveAsRequested() }
     Action { id: actTemplateManager; text: "Template Manager"; onTriggered: root.templateManagerRequested() }
     Action { id: actSaveTemplate; text: "Save Template"; onTriggered: root.saveTemplateRequested() }
+    Action { id: actCanvasSize; text: "Canvas Size"; onTriggered: root.canvasSizeRequested() }
 
     Action { id: actBringToFront; text: "Bring to Front"; enabled: false; onTriggered: root.bringToFrontRequested() }
     Action { id: actBringForward; text: "Bring Forward"; enabled: false; onTriggered: root.bringForwardRequested() }
@@ -95,7 +100,7 @@ Rectangle {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            text: "Run-time Interface Design"
+            text: "Run-time Interface Design - " + root.documentTitle
             color: "#ffffff"
             font.pixelSize: 13
             font.bold: true
@@ -174,8 +179,10 @@ Rectangle {
 
                 IconButton { action: actOpen; iconSource: topBarViewModel.openIcon; fallbackText: "O" }
                 IconButton { action: actSave; iconSource: topBarViewModel.saveIcon; fallbackText: "S" }
+                IconButton { action: actSaveAs; fallbackText: "SA"; glyph: "\u21e7" }
                 IconButton { action: actTemplateManager; iconSource: topBarViewModel.templateIcon; fallbackText: "TM"; glyph: "\u25a3" }
                 IconButton { action: actSaveTemplate; iconSource: topBarViewModel.saveTemplateIcon; fallbackText: "ST"; glyph: "\u229e" }
+                IconButton { action: actCanvasSize; fallbackText: "CS"; glyph: "\u25a1" }
 
                 ToolbarDivider {}
 

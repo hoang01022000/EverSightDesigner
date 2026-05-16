@@ -42,6 +42,8 @@ struct CanvasLayoutModel
     int splitTemplate = 0; // 0..7
     int customRows = 1;
     int customColumns = 1;
+    qreal canvasWidth = 1280.0;
+    qreal canvasHeight = 720.0;
     bool showGrid = false;
     QString gridLineColor = "#e0e0e0";
     QString backgroundColor = "#ffffff";

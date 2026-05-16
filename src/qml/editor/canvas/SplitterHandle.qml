@@ -5,11 +5,14 @@ Item {
 
     property string orientation: "vertical"
     property Item coordinateItem
+    property int parentCellId: -1
     readonly property bool vertical: orientation === "vertical"
     readonly property bool active: dragHandler.active
     readonly property bool hovered: hoverHandler.hovered
 
     signal dragged(real deltaRatio)
+    signal dragStarted()
+    signal dragFinished()
     signal mergeRequested()
 
     implicitWidth: vertical ? 12 : 80
@@ -51,8 +54,12 @@ Item {
         property real lastTranslation: 0
 
         onActiveChanged: {
-            if (active)
+            if (active) {
                 lastTranslation = root.vertical ? translation.x : translation.y
+                root.dragStarted()
+            } else {
+                root.dragFinished()
+            }
         }
 
         onTranslationChanged: {
